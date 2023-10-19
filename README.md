@@ -40,9 +40,9 @@ soon to be filled
 
   #### Tasks:
 
-  - [ ] Initialize GitHub Repository
+  - [x] Initialize GitHub Repository
   - [ ] Setup basic project structure
-  - [ ] Configure a README with project details
+  - [x] Configure a README with project details
 
 ---
 
@@ -109,12 +109,12 @@ soon to be filled
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+soon to be filled
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+soon to be filled
 
 ## Acknowledgments
 
-- Your mentors, advisors, or anyone else who helped you.
+soon to be filled
