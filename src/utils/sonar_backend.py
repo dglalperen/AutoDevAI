@@ -1,7 +1,7 @@
 import requests
 
 sonar_rules = [
-    "java:S2259", "javabugs:S6466", "java:S115", "java:S3655", "java:S138",
+    "java:S2259", "javabugs:S6466", "java:S3655", "java:S138",
     "java:S1541", "java:S1820", "java:S1192", "java:S1143", "java:S2142",
     "java:S1774", "java:S2057", "java:S106", "java:S2390", "java:S3552",
     "java:S2095", "java:S4925", "java:S2699", "java:S3776", "java:S1448",

@@ -1,15 +1,27 @@
-def prepare_prompt(issue):
-    return f"""
-    Task: Review the identified issue in the provided Java class and provide the corrected Java class code.
-    Focus only on the class code; do not include any comments or explanations.
+def prepare_prompt(issue_group_key, example_issue):
+    parts = issue_group_key.split(':', 1)
+
+    # Handling cases where 'line' key might not be present
+    line_info = f"Around Line {example_issue['line']}" if 'line' in example_issue else "Check the file in general"
+
+    prompt = f"""
+    System message: You are a Java programming master. Generate the corrected Java code based on the specified rule and present it in JSON format.
+
+    Task: Correct the identified issue in the provided Java class
+        and return the corrected class in its entirety.
 
     Issue Details:
-    - Rule: {issue['rule']}
-    - Component: {issue['component']}
-    - Location: Check around Line {issue['line']} or the related area in the file.
-    - Message: {issue['message']}
-    - Effort: {issue['effort']}
-    - Issue Type: {issue['type']}
+    - Rule: {example_issue['rule']}
+    - Component: {example_issue['component']}
+    - Location: {line_info} and generally the file {example_issue['component']}
+    - Message: {example_issue['message']}
+    - Issue Type: {example_issue['type']}
 
-    Return: Only the corrected Java class code.
+    Return: The corrected Java class code formatted as a JSON string. The structure should be:
+    {{
+        "result": "<corrected Java class code here>"
+    }}
+
     """
+    print(f"DEBUG: Prompt: {prompt}")
+    return prompt
