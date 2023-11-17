@@ -1,5 +1,6 @@
 import json
 import os
+import datetime
 
 def apply_fix_and_log(issue, fixed_code, repo_path, log_path):
     """
@@ -25,7 +26,7 @@ def apply_fix_and_log(issue, fixed_code, repo_path, log_path):
         'issue_key': issue['key'],
         'original_issue': issue,
         'fixed_code': fixed_code,
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     with open(log_path, 'a') as log_file:
         json.dump(resolution, log_file)

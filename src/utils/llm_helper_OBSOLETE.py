@@ -8,12 +8,12 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationSummaryMemory
 from langchain.chat_models import ChatOpenAI
-from load_java_documents_from_repo import load_java_documents_from_repo
+from utils.load_java_documents_from_repo import load_java_documents_from_repo
 import os
 
-dotenv.load_dotenv()
+#dotenv.load_dotenv()
 
-repo_path = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/java2022-kodlamaio"
+#repo_path = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/java2022-kodlamaio"
 
 if __name__ == "__main__":
     # Load all java files from repo

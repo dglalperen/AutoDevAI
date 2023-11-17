@@ -1,15 +1,15 @@
 def prepare_prompt(issue):
     return f"""
-    Task: Correct the identified issue in the provided Java class
-        and return the corrected class in its entirety.
+    Task: Review the identified issue in the provided Java class and provide the corrected Java class code.
+    Focus only on the class code; do not include any comments or explanations.
 
     Issue Details:
     - Rule: {issue['rule']}
     - Component: {issue['component']}
-    - Location: Line {issue['line']} (Start offset: {issue['textRange']['startOffset']}, End offset: {issue['textRange']['endOffset']})
+    - Location: Check around Line {issue['line']} or the related area in the file.
     - Message: {issue['message']}
     - Effort: {issue['effort']}
     - Issue Type: {issue['type']}
 
-    Please return the corrected Java class.
+    Return: Only the corrected Java class code.
     """

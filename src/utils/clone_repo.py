@@ -2,9 +2,7 @@ import dotenv
 import os
 import subprocess
 
-dotenv.load_dotenv()
 
-GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
 
 def clone_repo(repo_url):
     # Get the name of the repository from the URL
@@ -28,6 +26,13 @@ def clone_repo(repo_url):
     # Clone the repository into the repository folder
     subprocess.run(["git", "clone", repo_url, repo_path])
 
+    # Return the path where the repository is cloned
+    return repo_path
+
 # Cloning manually
-repo_url = "https://github.com/dglalperen/Rental-Car-Agency.git"
-clone_repo(repo_url)
+if __name__ == "__main__":
+    dotenv.load_dotenv()
+
+    GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+    repo_url = "https://github.com/dglalperen/Rental-Car-Agency.git"
+    clone_repo(repo_url)

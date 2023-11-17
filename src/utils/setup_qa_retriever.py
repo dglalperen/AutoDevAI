@@ -6,7 +6,7 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationSummaryMemory
 from langchain.chat_models import ChatOpenAI
-from load_java_documents_from_repo import load_java_documents_from_repo
+from utils.load_java_documents_from_repo import load_java_documents_from_repo
 
 dotenv.load_dotenv()
 
@@ -40,7 +40,7 @@ def setup_qa_retriever(repo_path, model='gpt-4'):
     retriever = db.as_retriever(search_types=["mmr"], search_kwargs={"k": 8})
 
     # Initialize language model for QA retrieval
-    llm = ChatOpenAI(model=model)
+    llm = ChatOpenAI(model=model, temperature=0.2)
     memory = ConversationSummaryMemory(llm=llm, memory_key="chat_history", return_messages=True)
     qa = ConversationalRetrievalChain.from_llm(llm, retriever=retriever, memory=memory)
 
