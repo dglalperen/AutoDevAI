@@ -2,29 +2,30 @@
 
 ## Description
 
-This project aims to leverage the capabilities of Large Language Models (LLM) and SonarQube to autonomously improve and evolve existing Java software repositories. Through multiple cycles of analysis, refactoring suggestions, and re-evaluation, the project seeks to assess the effectiveness of LLMs in software development.
+AutoDevAI leverages Large Language Models (LLMs) and SonarQube to autonomously enhance Java software repositories. By integrating automated issue detection with AI-driven code refactoring, this project explores the potential of AI in streamlining and improving software development processes.
 
 ## Table of Contents
 
 1. [Description](#Description)
 2. [Installation](#Installation)
 3. [Usage](#Usage)
-4. [Milestones](#Milestones)
-5. [Contributing](#Contributing)
-6. [License](#License)
-7. [Acknowledgments](#Acknowledgments)
+4. [Project Structure](#Project-Structure)
+5. [Milestones](#Milestones)
+6. [Contributing](#Contributing)
+7. [License](#License)
+8. [Acknowledgments](#Acknowledgments)
 
 ## Installation
 
 ### Python Requirements
 
-To generate the `requirements.txt` file, run:
+Generate the `requirements.txt`:
 
 ```bash
 pipreqs --savepath=requirements.in && pip-compile
 ```
 
-# Clone the repository
+### Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/AutoDevAI.git
@@ -32,89 +33,47 @@ git clone https://github.com/yourusername/AutoDevAI.git
 
 ## Usage
 
-soon to be filled
+Detailed usage instructions coming soon.
+
+## Project Structure
+
+- `main.py`: The main script running the automated refactoring process.
+- `utils/`: Contains helper modules for various functionalities like repository cloning, prompt preparation, and SonarQube integration.
+- `README.md`: Project documentation.
 
 ## Project Milestones
 
-- [ ] **Milestone 1: Project Initialization**
+### Milestone 1: Project Initialization
 
-  #### Tasks:
+- [x] Initialize GitHub Repository
+- [x] Setup basic project structure
+- [x] Configure a README with project details
 
-  - [x] Initialize GitHub Repository
-  - [ ] Setup basic project structure
-  - [x] Configure a README with project details
+### Milestone 2: SonarQube Integration
 
----
+- [x] Setup SonarQube locally or on a server
+- [x] Configure SonarQube to scan Java projects
+- [x] Fetch SonarQube analysis data via API
 
-- [ ] **Milestone 2: SonarQube Integration**
+### Milestone 3: LLM Integration
 
-  #### Tasks:
+- [x] Research and integrate LLM API
+- [x] Design and test LLM prompts for code refactoring
 
-  - [ ] Setup SonarQube locally or on a server
-  - [ ] Configure SonarQube to scan a sample Java project
-  - [ ] Write a script to automate SonarQube scans
-  - [ ] Fetch SonarQube analysis data via API
+### Milestone 4: Automated Refactoring
 
----
+- [x] Implement system to apply AI suggestions to code
+- [x] Create backups for comparison
+- [x] Automated review and application of changes
 
-- [ ] **Milestone 3: Data Analysis**
+### Milestone 5: Evaluation and Feedback Loop
 
-  #### Tasks:
+- [ ] Re-run SonarQube analysis on refactored code
+- [ ] Compare metrics pre- and post-refactoring
+- [ ] Adjust LLM integration based on feedback
 
-  - [ ] Parse SonarQube data for relevant metrics
-  - [ ] Identify issues requiring refactoring or fixes
-  - [ ] Design schema to store parsed data for LLM prompts
+### Milestone 6: Documentation and Reporting
 
----
-
-- [ ] **Milestone 4: LLM Integration**
-
-  #### Tasks:
-
-  - [ ] Research LLM APIs and select one for the project
-  - [ ] Design LLM prompts based on identified issues
-  - [ ] Fetch refactoring suggestions from LLM
-
----
-
-- [ ] **Milestone 5: Code Refactoring**
-
-  #### Tasks:
-
-  - [ ] Implement a system to apply LLM suggestions to codebase
-  - [ ] Create backups of original code for comparison
-  - [ ] Manually review and commit changes
-
----
-
-- [ ] **Milestone 6: Evaluation and Feedback Loop**
-
-  #### Tasks:
-
-  - [ ] Re-run SonarQube analysis on refactored code
-  - [ ] Compare metrics pre- and post-refactoring
-  - [ ] Fine-tune LLM prompts based on evaluation
-
----
-
-- [ ] **Milestone 7: Documentation and Reporting**
-
-  #### Tasks:
-
-  - [ ] Document the methodology and results
-  - [ ] Prepare a report summarizing findings
-  - [ ] Update GitHub README with project outcomes
-
----
-
-## Contributing
-
-soon to be filled
-
-## License
-
-soon to be filled
-
-## Acknowledgments
-
-soon to be filled
+- [ ] Document the methodology and results
+- [ ] Prepare a comprehensive report
+- [ ] Update README with project outcomes
