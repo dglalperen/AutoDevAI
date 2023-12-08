@@ -45,3 +45,4 @@ def setup_qa_retriever(repo_path, model='gpt-4'):
     qa = ConversationalRetrievalChain.from_llm(llm, retriever=retriever, memory=memory)
 
     return qa
+

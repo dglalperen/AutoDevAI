@@ -11,11 +11,16 @@ def apply_fix_and_log(issue, fixed_code, repo_path, log_path):
     :param repo_path: Path to the local repository.
     :param log_path: Path to store the resolution logs.
     """
+    
+    print("DEBUG Prompt Response:", fixed_code)
+    
+    # Do not apply changes if fixed_code is empty
+    if not fixed_code.strip():
+        print(f"No valid fix provided for {issue['key']}. Skipping...")
+        return
+
     # Construct the file path from the issue component and repo path
     file_path = os.path.join(repo_path, issue['component'].split(':')[1])
-
-    # Backup original file (optional)
-    # os.rename(file_path, file_path + ".backup")
 
     # Write the fixed code to the file
     with open(file_path, 'w') as file:

@@ -22,3 +22,8 @@ https://docs.sonarcloud.io/improving/clean-as-you-code/
 
 Notes:
 - We can use quality gates to define a set of conditions which the project is measured install
+
+
+- we will have to provide more context about the rule itself (X)
+- we will have to test on more repositories ( )
+- we will have to maybe run the unit tests too if provided ( )

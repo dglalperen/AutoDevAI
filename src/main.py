@@ -82,6 +82,7 @@ def main():
         first_issue = issues_in_group[0]
         prompt_text = prepare_prompt(group_key, first_issue)
         response = qa(prompt_text)
+        print("DEBUG: Response:", response)
         
         # Apply fixes and build the project
         for attempt in range(3):
@@ -96,7 +97,7 @@ def main():
                 break
             else:
                 print("Build failed. Attempting to fix...")
-                error_fix_prompt = build_error_fix_prompt(error_message, cloned_repo_path)
+                error_fix_prompt = build_error_fix_prompt(error_message)
                 response = qa(error_fix_prompt)  # Get a fix for the build error
                 if not response['answer']:
                     print("Unable to resolve build error.")
