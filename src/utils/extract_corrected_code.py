@@ -2,18 +2,25 @@ import json
 import re
 
 def extract_corrected_code(response):
-    # Adjusting the regex pattern to account for varying whitespace/newline characters
+    # First, try to extract the JSON formatted response
     json_match = re.search(r"```json\s*\n?(\{.*?\})\n?\s*```", response, re.DOTALL)
     if json_match:
         json_string = json_match.group(1)
         try:
             parsed_json = json.loads(json_string)
             corrected_code = parsed_json.get('result', '')
-            return corrected_code
+            if corrected_code:
+                return corrected_code
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
-    else:
-        print("No JSON string found in the response.")
+
+    # If JSON extraction fails, try to extract the Java code block
+    java_code_match = re.search(r"```java\s*\n(.*?)\n\s*```", response, re.DOTALL)
+    if java_code_match:
+        return java_code_match.group(1)
+
+    # If both methods fail, log that no corrected code was found
+    print("No corrected code found in the response.")
     return ''
 
 

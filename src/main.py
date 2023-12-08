@@ -3,7 +3,7 @@ from utils.build_error_fix_prompt import build_error_fix_prompt
 from utils.build_maven import run_maven_build
 from utils.clone_repo import clone_repo
 from utils.console_interaction import fork_and_clone_repository, introduce_program, get_repository, ask_to_fork_and_clone, is_valid_github_url
-from utils.prepare_prompt import prepare_prompt
+from utils.prepare_prompt import fetch_rule_details, prepare_prompt
 from utils.setup_qa_retriever import setup_qa_retriever
 from utils.sonar_backend import get_projects, get_filtered_issues
 from utils.apply_fix_and_log import apply_fix_and_log
@@ -80,7 +80,8 @@ def main():
             continue
 
         first_issue = issues_in_group[0]
-        prompt_text = prepare_prompt(group_key, first_issue)
+        rule_details = fetch_rule_details(first_issue['rule'])
+        prompt_text = prepare_prompt(group_key, first_issue,rule_details)
         response = qa(prompt_text)
         print("DEBUG: Response:", response)
         
