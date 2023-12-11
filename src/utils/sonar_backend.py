@@ -48,6 +48,7 @@ def get_filtered_issues(project_key):
 def main():
     organization = "dglalperen"
     project_key = "dglalperen_Rental-Car-Agency"
+    #project_key = "dglalperen_Online-Banking-System"
     #projects = get_projects(organization)
     
     issues = get_issues(project_key)

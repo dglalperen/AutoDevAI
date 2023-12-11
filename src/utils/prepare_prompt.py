@@ -25,6 +25,21 @@ def prepare_prompt(issue_group_key, example_issue, rule_details):
 
     line_info = f"Around Line {example_issue['line']}" if 'line' in example_issue else "Check the file in general"
 
+
+    test_prompt = f"""
+    System message: You are a Java programming master. Your task is to identify and correct the specific issue in the Java code snippet provided.
+
+    Issue Details:
+    - Rule: {example_issue['rule']}
+    - Location: Around Line {line_info} in the file {example_issue['component']}
+    - Problem: {example_issue['message']}
+    - Explanation: {rule_explanation_brief}
+    - Component: {example_issue['component']}
+
+    Please correct the issue in the Java class and return only the corrected code. No additional comments, explanations, or formatting are needed.
+    """
+
+
     prompt = f"""
     System message: You are a Java programming master. Use the rule details provided to identify and correct the specific issue in the Java code. Return the corrected code in JSON format.
 
@@ -48,7 +63,7 @@ def prepare_prompt(issue_group_key, example_issue, rule_details):
     Note: Ensure the entire Java class code is encapsulated within the JSON structure, using proper JSON string escaping where necessary.
     """
 
-    return prompt
+    return test_prompt
 
 def extract_relevant_parts(md_description):
     # Updated patterns for the start of sections

@@ -55,7 +55,6 @@ def ask_to_fork_and_clone():
 def fork_and_clone_repository(repo_url):
     dotenv.load_dotenv()
     GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
-    
     # Authenticate with GitHub
     g = Github(GITHUB_API_KEY)
     try:

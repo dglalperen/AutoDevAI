@@ -25,5 +25,35 @@ Notes:
 
 
 - we will have to provide more context about the rule itself (X)
-- we will have to test on more repositories ( )
+- we will have to test on more repositories (X)
 - we will have to maybe run the unit tests too if provided ( )
+
+
+
+Zwischenergebnisse:
+
+- Building mit maven funktioniert einwandfrei
+- Mehrere Repositories getestet
+
+
+Probleme:
+- Extraction of the concrete errors using regex not working properly
+--> Workaround: outputting the build output including the potential errors and passing it
+    to the buil_fixing_prompt
+    - To Do --> try to improve the regex to extract the errors
+    - Python maven
+
+- Exraction of code from response
+    - Case 1: sometimes the code is not in the response
+    - Case 2: sometimes the code is in the response but not in the correct format
+    --> Versucht durch verschiedene Abdeckungen zu lösen
+    --> GPT Functions
+--> Possible Solution: instead of trying to extract the code from the response
+    in a specific format, we can try to improve the prompt to just return the whole class
+    --> versucht aber nicht wirklich erfolgreich
+
+Offene Punkte:
+- Sonar Scan automatisieren
+
+uwe schöning theoretische infor kurzgefasst
+https://www.amazon.de/s?k=uwe+sch%C3%B6ning+theoretische+informatik+kurz+gefasst&crid=7330EUIK0DDT&sprefix=uwe+sch%C3%B6ning+%2Caps%2C167&ref=nb_sb_ss_ts-doa-p_2_13
