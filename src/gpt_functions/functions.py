@@ -8,8 +8,8 @@ dotenv.load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
-gpt_model = "gpt-3.5-turbo"
-#gpt_model = "gpt-4-1106-preview"
+#gpt_model = "gpt-3.5-turbo"
+gpt_model = "gpt-4-1106-preview"
 
 # Example dummy function to format Java code into JSON
 def format_code_as_json(java_code):
