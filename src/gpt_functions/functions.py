@@ -1,4 +1,4 @@
-from openai import OpenAI
+import openai
 import json
 import os
 from tqdm import tqdm
@@ -7,17 +7,20 @@ import dotenv
 dotenv.load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
+openai.api_key = OPENAI_API_KEY
 #gpt_model = "gpt-3.5-turbo"
 gpt_model = "gpt-4-1106-preview"
-
-# Example dummy function to format Java code into JSON
+    
 def format_code_as_json(java_code):
-    """Format Java code into a strict JSON structure"""
+    """
+    Formats Java code into a JSON structure.
+
+    :param java_code: String containing Java class code.
+    :return: JSON string with the Java code encapsulated.
+    """
     try:
-        # This is a dummy implementation. 
-        # In a real scenario, you would implement proper JSON formatting here.
-        return json.dumps({"result": java_code})
+        formatted_json = json.dumps({"result": java_code})
+        return formatted_json
     except Exception as e:
         return json.dumps({"error": str(e)})
 
@@ -48,11 +51,11 @@ def run_conversation():
             }
         }
     ]
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model=gpt_model,
         messages=messages,
         tools=tools,
-        tool_choice="auto"  # auto is default, but we'll be explicit
+        tool_choice="auto"
     )
     response_message = response.choices[0].message
     tool_calls = response_message.tool_calls
@@ -77,38 +80,11 @@ def run_conversation():
                     "content": function_response,
                 }
             )  # extend conversation with function response
-        second_response = client.chat.completions.create(
+        second_response = openai.ChatCompletion.create(
             model=gpt_model,
             messages=messages,
         )  # get a new response from the model where it can see the function response
         return second_response
-
-# Running the conversation
-#response = run_conversation()
-
-# # Check if response is valid and has content
-# if response and response.choices and response.choices[0].message.content:
-    
-#     response_content = response.choices[0].message.content
-
-#     # Check if the response contains a JSON block
-#     if "```json" in response_content:
-#         # Extract JSON string from the Markdown code block
-#         json_string = response_content.split('```json')[1].split('```')[0].strip()
-
-#         try:
-#             # Parse the extracted JSON string
-#             formatted_code_json = json.loads(json_string)
-#             print("Parsed JSON Data:", formatted_code_json)
-#         except json.JSONDecodeError as e:
-#             print("Error decoding JSON:", e)
-#             print("Extracted JSON String:", json_string)
-#     else:
-#         print("No JSON block found in the response.")
-        
-# else:
-#     print("No valid response content received.")
-    
     
 
 def test_gpt_function(iterations=10):
