@@ -32,9 +32,9 @@ def extract_detailed_error_message(stderr):
         return "Detailed error message not found. Check the Maven build logs."
 
 
-
 if __name__ == "__main__":
-    project_path = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency"
+    #project_path = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency"
+    project_path = "/Users\Alpi\Desktop\HRW\Master\Projekt-2\AutoDevAI\Repos\Online-Banking-System"
     success, error_message = run_maven_build(project_path)
     if success:
         print("Build was successful.")

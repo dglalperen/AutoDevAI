@@ -9,6 +9,7 @@ from utils.sonar_backend import get_projects, get_filtered_issues
 from utils.apply_fix_and_log import apply_fix_and_log
 from utils.processed_issues_operations import load_processed_issues
 from utils.extract_corrected_code import extract_corrected_code
+from utils.sonarqube.sonar_scan import run_sonarqube_scan, create_sonar_project_file_if_not_exists
 import json
 
 GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
@@ -34,11 +35,24 @@ def main():
         print(f"Using local repository at {cloned_repo_path}")
 
     print("Repository operation successful.")
-    #! DONT KNOW IF WE CAN DO THAT AUTOMATICALLY
+
+    # Compiling before scanning
+    print("Compiling the project...")
+    print("Cloned repo path:", cloned_repo_path)
+    build_result, error_message = run_maven_build(cloned_repo_path)
+    if not build_result:
+        print("Failed to compile the project.")
+        print("Error:", error_message)
+        return
+    
+    project_namee = os.path.basename(cloned_repo_path)
+    create_sonar_project_file_if_not_exists(cloned_repo_path, project_namee)
+    #return
+
     print("Initiating SonarQube scan...")
+    run_sonarqube_scan(cloned_repo_path)
+    return
     # Implement SonarQube scan and fetch results
-    # issues = perform_sonarqube_scan(cloned_repo_path)
-    #!
 
     # Get Projects from sonar backend
     organization = "dglalperen"
