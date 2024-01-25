@@ -1,9 +1,27 @@
 import subprocess
 import re
 import os
+from pathlib import Path
 # mvn clean install -DskipTests
 
 # docker run --rm -v /Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency:/app maven-build-17 mvn clean install -DskipTests
+
+def check_and_build_custom_maven_image():
+    try:
+        # Check if the custom Maven image exists locally
+        subprocess.run(["docker", "image", "inspect", "maven-build-17"], check=True, capture_output=True)
+        print("Custom Maven image already exists.")
+    except subprocess.CalledProcessError:
+        # If the image doesn't exist, build it from the Dockerfile
+        try:
+            dockerfile_path = Path("../../Dockerfile.maven").as_posix()
+            subprocess.run(["docker", "build", "-t", "maven-build-17", "-f", dockerfile_path, "."], check=True)
+            print("Custom Maven image built successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to build custom Maven image: {e}")
+            return False
+    return True
+
 
 def run_maven_build_docker(project_path):
     try:
@@ -64,8 +82,9 @@ def list_maven_projects(repos_dir):
     return maven_projects
 
 def main():
-    repos_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos"  # Provide the absolute path
-    maven_projects = list_maven_projects(repos_dir)
+    windows_dir="/Users/adagli/Desktop/Coding/Uni/Projekt-2/AutoDevAI/Repos"
+    mac_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos"  # Provide the absolute path
+    maven_projects = list_maven_projects(windows_dir)
 
     # Display Maven projects and let the user choose
     print("Available Maven Projects:")
@@ -85,4 +104,7 @@ def main():
         print("Invalid selection.")
 
 if __name__ == "__main__":
-    main()
+    if check_and_build_custom_maven_image():
+        main()
+    else:
+        print("Failed to build the custom Maven image. Exiting.")

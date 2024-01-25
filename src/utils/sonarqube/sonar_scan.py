@@ -1,15 +1,24 @@
 import subprocess
 import os
 
-import subprocess
-import os
-
+def check_and_pull_sonarqube_image():
+    try:
+        # Check if the SonarQube image exists
+        subprocess.run(["docker", "image", "inspect", "sonarqube"], check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        # Image doesn't exist, pull it
+        print("SonarQube image not found. Pulling...")
+        subprocess.run(["docker", "pull", "sonarqube"], check=True)
+        
 def run_sonarqube_scan_docker(repo_path):
+    # Check and pull the SonarQube image if needed
+    check_and_pull_sonarqube_image()
+
     try:
         subprocess.run(
             ["docker", "run", "--rm", 
              "-v", f"{os.path.abspath(repo_path)}:/usr/src", 
-             "sonarqube"], 
+             "sonarqube-scanner"], 
             check=True
         )
         print("SonarQube scan completed successfully.")
@@ -65,5 +74,7 @@ def main():
     run_sonarqube_scan(cloned_repo_path)
 
 if __name__ == "__main__":
-    run_sonarqube_scan_docker("/Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency")
+    mac_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency"
+    windows_dir = "/Users/adagli/Desktop/Coding/Uni/Projekt-2/AutoDevAI/Repos/Rental-Car-Agency"
+    run_sonarqube_scan_docker(windows_dir)
     #test_create_sonar_project_file_if_not_exists()

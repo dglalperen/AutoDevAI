@@ -1,6 +1,6 @@
 import os
 from utils.build_error_fix_prompt import build_error_fix_prompt
-from utils.build_maven import run_maven_build
+from utils.build_maven import run_maven_build, run_maven_build_docker
 from utils.clone_repo import clone_repo
 from utils.console_interaction import fork_and_clone_repository, introduce_program, get_repository, ask_to_fork_and_clone, is_valid_github_url
 from utils.prepare_prompt import fetch_rule_details, prepare_prompt, prepare_prompt_with_function_call
@@ -39,7 +39,7 @@ def main():
     # Compiling before scanning
     print("Compiling the project...")
     print("Cloned repo path:", cloned_repo_path)
-    build_result, error_message = run_maven_build(cloned_repo_path)
+    build_result, error_message = run_maven_build_docker(cloned_repo_path)
     if not build_result:
         print("Failed to compile the project.")
         print("Error:", error_message)
@@ -47,7 +47,7 @@ def main():
     
     project_namee = os.path.basename(cloned_repo_path)
     create_sonar_project_file_if_not_exists(cloned_repo_path, project_namee)
-    #return
+    return
 
     print("Initiating SonarQube scan...")
     run_sonarqube_scan(cloned_repo_path)
