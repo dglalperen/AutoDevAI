@@ -1,6 +1,23 @@
 import subprocess
 import os
 
+import subprocess
+import os
+
+def run_sonarqube_scan_docker(repo_path):
+    try:
+        subprocess.run(
+            ["docker", "run", "--rm", 
+             "-v", f"{os.path.abspath(repo_path)}:/usr/src", 
+             "sonarqube"], 
+            check=True
+        )
+        print("SonarQube scan completed successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"SonarQube scan failed: {e}")
+
+
+
 def run_sonarqube_scan(repo_path):
     original_dir = os.getcwd()
     os.chdir(repo_path)
@@ -35,6 +52,7 @@ def test_create_sonar_project_file_if_not_exists():
 
 
 def main():
+    repos_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos"
     # Assuming that the cloned repository path is obtained from some user input or other logic
     cloned_repo_path = ""  # Placeholder: Replace with logic to obtain the actual repo path
 
@@ -47,4 +65,5 @@ def main():
     run_sonarqube_scan(cloned_repo_path)
 
 if __name__ == "__main__":
-    test_create_sonar_project_file_if_not_exists()
+    run_sonarqube_scan_docker("/Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency")
+    #test_create_sonar_project_file_if_not_exists()

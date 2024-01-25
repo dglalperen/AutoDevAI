@@ -177,7 +177,7 @@ if __name__ == "__main__":
     rule_details = fetch_rule_details("java:S1192")
 
     # Prepare the prompt using the 'prepare_prompt2' function
-    prompt = prepare_prompt2("java:S1192:src/main/java/com/rentalcar/agency/CarRentalAgency.java", {
+    prompt = prepare_prompt_with_function_call("java:S1192:src/main/java/com/rentalcar/agency/CarRentalAgency.java", {
         "key": "dglalperen_Rental-Car-Agency:src/main/java/com/rentalcar/agency/CarRentalAgency.java:java:S1192",
         "rule": "java:S1192",
         "severity": "MAJOR",
