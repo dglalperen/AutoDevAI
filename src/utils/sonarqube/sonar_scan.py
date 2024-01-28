@@ -1,44 +1,22 @@
 import subprocess
 import os
-
-def check_and_pull_sonarqube_image():
-    try:
-        # Check if the SonarQube image exists
-        subprocess.run(["docker", "image", "inspect", "sonarqube"], check=True, capture_output=True)
-    except subprocess.CalledProcessError as e:
-        # Image doesn't exist, pull it
-        print("SonarQube image not found. Pulling...")
-        subprocess.run(["docker", "pull", "sonarqube"], check=True)
         
-def run_sonarqube_scan_docker(repo_path):
-    # Check and pull the SonarQube image if needed
-    check_and_pull_sonarqube_image()
-
+def run_sonarqube_scan_docker(repo_path, sonarcloud_token, organization, project_key):
     try:
         subprocess.run(
-            ["docker", "run", "--rm", 
-             "-v", f"{os.path.abspath(repo_path)}:/usr/src", 
-             "sonarqube-scanner"], 
-            check=True
+            ["docker", "run", "--rm",
+             "-v", f"{os.path.abspath(repo_path)}:/usr/src",
+             "sonarsource/sonar-scanner-cli",
+             "-Dsonar.projectKey=" + project_key,
+             "-Dsonar.organization=" + organization,
+             "-Dsonar.sources=.",
+             "-Dsonar.host.url=https://sonarcloud.io",
+             "-Dsonar.login=" + sonarcloud_token],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
-        print("SonarQube scan completed successfully.")
+        print("SonarCloud scan completed successfully.")
     except subprocess.CalledProcessError as e:
-        print(f"SonarQube scan failed: {e}")
-
-
-
-def run_sonarqube_scan(repo_path):
-    original_dir = os.getcwd()
-    os.chdir(repo_path)
-    try:
-        #subprocess.run(["sonar-scanner"], check=True)
-        # temporarely using direct path
-        subprocess.run(["C:\\Users\\Alpi\\Desktop\\HRW\\Master\\sonar-scanner-cli-5.0.1.3006-windows\\sonar-scanner-5.0.1.3006-windows\\bin\\sonar-scanner.bat"], check=True)
-        print("SonarQube scan completed successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"SonarQube scan failed: {e}")
-    finally:
-        os.chdir(original_dir)
+        print("SonarCloud scan failed.")
 
 def create_sonar_project_file_if_not_exists(repo_path, repo_name):
     sonar_file_path = os.path.join(repo_path, 'sonar-project.properties')
@@ -58,20 +36,6 @@ def test_create_sonar_project_file_if_not_exists():
     repo_path = "../../../Repos/Rental-Car-Agency"
     repo_name = "rental-car-agency"
     create_sonar_project_file_if_not_exists(repo_path, repo_name)
-
-
-def main():
-    repos_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos"
-    # Assuming that the cloned repository path is obtained from some user input or other logic
-    cloned_repo_path = ""  # Placeholder: Replace with logic to obtain the actual repo path
-
-    # Verify that the path is not empty
-    if not cloned_repo_path:
-        print("Error: Cloned repository path is empty.")
-        return
-
-    print(f"Initiating SonarQube scan on repository at {cloned_repo_path}...")
-    run_sonarqube_scan(cloned_repo_path)
 
 if __name__ == "__main__":
     mac_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency"

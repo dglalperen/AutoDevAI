@@ -1,6 +1,6 @@
 import os
 from utils.build_error_fix_prompt import build_error_fix_prompt
-from utils.build_maven import run_maven_build, run_maven_build_docker
+from utils.build_maven import run_maven_build_docker
 from utils.clone_repo import clone_repo
 from utils.console_interaction import fork_and_clone_repository, introduce_program, get_repository, ask_to_fork_and_clone, is_valid_github_url
 from utils.prepare_prompt import fetch_rule_details, prepare_prompt, prepare_prompt_with_function_call
@@ -9,11 +9,13 @@ from utils.sonar_backend import get_projects, get_filtered_issues
 from utils.apply_fix_and_log import apply_fix_and_log
 from utils.processed_issues_operations import load_processed_issues
 from utils.extract_corrected_code import extract_corrected_code
-from utils.sonarqube.sonar_scan import run_sonarqube_scan, create_sonar_project_file_if_not_exists
+from utils.sonarqube.sonar_scan import create_sonar_project_file_if_not_exists, run_sonarqube_scan_docker
 import json
 
 GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SONARCLOUD_TOKEN = os.getenv("SONARCLOUD_TOKEN")
+SONARQUBE_URL = os.getenv("SONARQUBE_URL")
 DEBUG_GITHUB_URL = "https://github.com/dglalperen/Rental-Car-Agency.git"
 
 def main():
@@ -38,19 +40,17 @@ def main():
 
     # Compiling before scanning
     print("Compiling the project...")
-    print("Cloned repo path:", cloned_repo_path)
     build_result, error_message = run_maven_build_docker(cloned_repo_path)
     if not build_result:
         print("Failed to compile the project.")
         print("Error:", error_message)
         return
     
-    project_namee = os.path.basename(cloned_repo_path)
-    create_sonar_project_file_if_not_exists(cloned_repo_path, project_namee)
-    return
+    project_name = os.path.basename(cloned_repo_path)
+    create_sonar_project_file_if_not_exists(cloned_repo_path, project_name)
 
     print("Initiating SonarQube scan...")
-    run_sonarqube_scan(cloned_repo_path)
+    run_sonarqube_scan_docker(cloned_repo_path, SONARCLOUD_TOKEN, "dglalperen", project_name)
     return
     # Implement SonarQube scan and fetch results
 

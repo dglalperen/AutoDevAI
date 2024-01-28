@@ -8,49 +8,37 @@ from pathlib import Path
 
 def check_and_build_custom_maven_image():
     try:
-        # Check if the custom Maven image exists locally
-        subprocess.run(["docker", "image", "inspect", "maven-build-17"], check=True, capture_output=True)
+        subprocess.run(["docker", "image", "inspect", "maven-build-17"], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("Custom Maven image already exists.")
     except subprocess.CalledProcessError:
-        # If the image doesn't exist, build it from the Dockerfile
         try:
             dockerfile_path = Path("../../Dockerfile.maven").as_posix()
-            subprocess.run(["docker", "build", "-t", "maven-build-17", "-f", dockerfile_path, "."], check=True)
+            subprocess.run(["docker", "build", "-t", "maven-build-17", "-f", dockerfile_path, "."], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print("Custom Maven image built successfully.")
         except subprocess.CalledProcessError as e:
-            print(f"Failed to build custom Maven image: {e}")
+            print("Failed to build custom Maven image.")
             return False
     return True
 
 
 def run_maven_build_docker(project_path):
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["docker", "run", "--rm", "-v", 
-             f"{project_path}:/app",
-             "maven-build-17", "mvn", "clean", "install", "-DskipTests"],
-            check=True, capture_output=True, text=True
+             f"{project_path}:/app", "maven-build-17", 
+             "mvn", "-B", "clean", "install", "-DskipTests"],
+            stderr=subprocess.PIPE,  # Capture standard error
+            stdout=subprocess.DEVNULL,  # Suppress standard output
+            text=True  # Ensure output is in text format, not bytes
         )
-        print("Build Output:\n", result.stdout)
+        print("Build successful.")
         return True, None
     except subprocess.CalledProcessError as e:
         print("Build failed. Output:\n", e.stdout)
         print("Build failed. Error Output:\n", e.stderr)
         return False, e.stderr
-
-
-def run_maven_build(project_path):
-    try:
-        result = subprocess.run(['mvn', 'clean', 'install', '-DskipTests'], cwd=project_path, check=True, capture_output=True)
-        print("Build Output:\n", result.stdout.decode())
-        return True, None
-    except subprocess.CalledProcessError as e:
-        #print("Build Error Output:\n", e.output.decode())
-        #print("Build Error Stderr:\n", e.stderr.decode())
-        #error_message = extract_detailed_error_message(e.output.decode())
-        error_message = e.output.decode()
-        #print("Detailed Maven Error:\n", error_message)
-        return False, error_message
 
 def extract_detailed_error_message(stderr):
     # Pattern to identify the start of the actual error message
