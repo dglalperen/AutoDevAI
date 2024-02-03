@@ -75,3 +75,42 @@ def is_valid_github_url(url):
 def get_repo_name_from_url(url):
     return url.split('/')[-2] + '/' + url.split('/')[-1].replace('.git', '')
 
+def get_number_of_generations():
+    """
+    Ask the user for the number of generations they want to run the program.
+    """
+    while True:
+        try:
+            generations = int(input("Enter the number of generations to run: ").strip())
+            if generations > 0:
+                return generations
+            else:
+                print("Please enter a positive integer.")
+        except ValueError:
+            print("Invalid input. Please enter an integer.")
+            
+def commit_changes(repo_path, message):
+    """
+    Commit changes to the local repository.
+
+    :param repo_path: Path to the local repository.
+    :param message: Commit message.
+    """
+    # Navigate to the repository directory
+    os.chdir(repo_path)
+    
+    # Configure Git to bypass the need for user identity in this script context
+    os.system("git config user.name 'dglalperen'")
+    os.system("git config user.email 'alperen.dagli43@gmail.com'")
+    
+    # Add all changes to staging
+    os.system("git add .")
+    
+    # Commit the changes
+    commit_status = os.system(f"git commit -m '{message}'")
+    
+    # Check if commit was successful
+    if commit_status == 0:
+        print("Changes committed successfully.")
+    else:
+        print("No changes to commit or commit failed.")

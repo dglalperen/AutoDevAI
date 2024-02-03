@@ -1,0 +1,11 @@
+# Use an OpenJDK 17 base image
+FROM openjdk:17-slim
+
+# Install Maven
+RUN apt-get update && apt-get install -y maven
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Optionally set a default command
+CMD ["mvn", "--version"]
