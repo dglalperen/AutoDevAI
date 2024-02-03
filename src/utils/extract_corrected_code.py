@@ -1,28 +1,34 @@
 import json
 import re
 
+def unescape_java_code(code):
+    """Unescape Java code string extracted from JSON."""
+    # Replace escaped newlines and escaped backslashes
+    return code.encode().decode('unicode_escape')
+
 def extract_corrected_code(response):
-    # First, try to extract the JSON formatted response
-    json_match = re.search(r"```json\s*\n?(\{.*?\})\n?\s*```", response, re.DOTALL)
+    # Improved regex to capture more complex JSON structures
+    json_match = re.search(r"```json\s*\n?(\{[\s\S]*?\})\s*```", response)
     if json_match:
         json_string = json_match.group(1)
         try:
             parsed_json = json.loads(json_string)
             corrected_code = parsed_json.get('result', '')
             if corrected_code:
-                return corrected_code
+                # Unescape Java code if extracted from JSON
+                return unescape_java_code(corrected_code)
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
+            # Fall through to try extracting as plain Java code block
 
-    # If JSON extraction fails, try to extract the Java code block
-    java_code_match = re.search(r"```java\s*\n(.*?)\n\s*```", response, re.DOTALL)
+    # Try to extract the Java code block if JSON extraction fails
+    java_code_match = re.search(r"```java\s*\n([\s\S]*?)\n\s*```", response)
     if java_code_match:
         return java_code_match.group(1)
 
-    # If both methods fail, log that no corrected code was found
+    # Log if no corrected code was found
     print("No corrected code found in the response.")
     return ''
-
 
 if __name__ == "__main__":
     response = """

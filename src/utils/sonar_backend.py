@@ -43,15 +43,16 @@ def get_filtered_issues(project_key):
     if issues:
         return filter_issues(issues)
     else:
+        print(f"No issues found for {project_key}.")
         return None
 
 def main():
     organization = "dglalperen"
-    project_key = "dglalperen_Rental-Car-Agency"
+    project_key = "Java-BookStore"
     #project_key = "dglalperen_Online-Banking-System"
-    #projects = get_projects(organization)
     
     issues = get_issues(project_key)
+    print(f"Total Issues for {project_key}: {len(issues)}")
     if issues:
         filtered_issues = filter_issues(issues)
         print(f"Total Filtered Issues for {project_key}: {len(filtered_issues)}")

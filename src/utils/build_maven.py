@@ -33,7 +33,6 @@ def run_maven_build_docker(project_path):
             stdout=subprocess.DEVNULL,  # Suppress standard output
             text=True  # Ensure output is in text format, not bytes
         )
-        print("Build successful.")
         return True, None
     except subprocess.CalledProcessError as e:
         print("Build failed. Output:\n", e.stdout)

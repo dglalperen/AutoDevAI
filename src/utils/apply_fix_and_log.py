@@ -12,12 +12,12 @@ def apply_fix_and_log(issue, fixed_code, repo_path, log_path):
     :param log_path: Path to store the resolution logs.
     """
     
+    issue_details = f"Rule: {issue['rule']} - Message: {issue['message']} - Component: {issue['component']}"
+    print(60*"-")
+    print(f"\nHandling Issue: {issue_details}\n")
     print(60*"-")
     print("DEBUG Prompt Response:", fixed_code)
     print(60*"-")
-    print("DEBUG Repo Path:", repo_path)
-    print(60*"-")
-    print("DEBUG Log Path:", log_path)
     # Do not apply changes if fixed_code is empty
     if not fixed_code.strip():
         print(f"No valid fix provided for {issue['key']}. Skipping...")
@@ -31,14 +31,17 @@ def apply_fix_and_log(issue, fixed_code, repo_path, log_path):
         file.write(fixed_code)
 
     # Log the resolution
-    resolution = {
+    log_entry = {
+        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'issue_key': issue['key'],
-        'original_issue': issue,
-        'fixed_code': fixed_code,
-        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        'rule': issue['rule'],
+        'message': issue['message'],
+        'component': issue['component'],
+        'fixed_code_summary': fixed_code[:100] + '...' if len(fixed_code) > 100 else fixed_code,
+        'file_path': file_path
     }
     with open(log_path, 'a') as log_file:
-        json.dump(resolution, log_file)
+        json.dump(log_entry, log_file)
         log_file.write('\n')
 
     print(f"Applied fix for {issue['key']} and logged the resolution.")
