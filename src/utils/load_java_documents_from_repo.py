@@ -36,6 +36,7 @@ def load_java_documents_from_repo(repo_path):
     """
     java_directories = find_java_directories(repo_path)
     documents = []
+    print("Debug 1")
     for java_dir in java_directories:
         loader = GenericLoader.from_filesystem(
             path=java_dir,
@@ -45,6 +46,7 @@ def load_java_documents_from_repo(repo_path):
         )
         documents.extend(loader.load())
     
+    print("Debug 2")
     return remove_duplicate_documents(documents)
 
 def load_java_documents_from_repo_new(repo_path):

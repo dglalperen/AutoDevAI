@@ -51,6 +51,8 @@ def main():
             print("Error:", error_message)
             return
         
+        print("Build successful.")
+        
         project_name = os.path.basename(cloned_repo_path)
         create_sonar_project_file_if_not_exists(cloned_repo_path, project_name)
 
@@ -80,7 +82,7 @@ def main():
             grouped_issues[issue_group_key].append(issue)
 
         # For each group, get a fix from OpenAI
-        qa = setup_qa_retriever(cloned_repo_path, model='gpt-4')
+        qa = setup_qa_retriever(cloned_repo_path, model='gpt-4-0125-preview')
         
         script_dir = os.path.dirname(os.path.abspath(__file__))
         log_path = os.path.join(script_dir, 'issue_resolutions.log')
