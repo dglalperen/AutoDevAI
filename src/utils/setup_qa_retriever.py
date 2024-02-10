@@ -10,7 +10,7 @@ from utils.load_java_documents_from_repo import load_java_documents_from_repo
 
 dotenv.load_dotenv()
 
-def setup_qa_retriever(repo_path, model='gpt-4'):
+def setup_qa_retriever(repo_path, model='gpt-4-0125-preview'):
     """
     Set up the QA retriever with documents from a given Java repository.
 

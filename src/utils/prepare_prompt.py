@@ -27,10 +27,15 @@ def prepare_prompt_with_function_call(issue_group_key, example_issue, rule_detai
 
     # Adjusted prompt to include instructions for using 'format_code_as_json'
     prompt = f"""
-    System message: You are a Java programming master. Use the rule details provided to identify and correct the specific issue in the Java code. After correcting the code, use the 'format_code_as_json' function to format the corrected code into a JSON structure.
+    System message: You are a Java programming master.
+    Use the rule details provided to identify and correct the specific issue
+    in the Java code.
+    After correcting the code, use the 'format_code_as_json' function
+    to format the corrected code into a JSON structure.
 
     Task: Correct the identified issue in the provided Java class
-        and return the corrected class in its entirety. Then, format the corrected class using the 'format_code_as_json' function.
+        and return the corrected class in its entirety.
+        Then, format the corrected class using the 'format_code_as_json' function.
 
     Issue Details:
     - Rule: {example_issue['rule']} - Severity: {rule_details['rule']['severity']}
@@ -48,58 +53,6 @@ def prepare_prompt_with_function_call(issue_group_key, example_issue, rule_detai
     """
 
     return prompt
-
-def prepare_prompt(issue_group_key, example_issue, rule_details):
-    parts = issue_group_key.split(':', 1)
-    rule_key = parts[0]
-
-    # Use Markdown description directly
-    rule_explanation_md = rule_details['rule']['mdDesc'] if rule_details else "No additional rule details available."
-
-    # Extract key parts of the rule explanation
-    rule_explanation_brief = extract_relevant_parts(rule_explanation_md)
-
-    line_info = f"Around Line {example_issue['line']}" if 'line' in example_issue else "Check the file in general"
-
-
-    test_prompt = f"""
-    System message: You are a Java programming master. Your task is to identify and correct the specific issue in the Java code snippet provided.
-
-    Issue Details:
-    - Rule: {example_issue['rule']}
-    - Location: Around Line {line_info} in the file {example_issue['component']}
-    - Problem: {example_issue['message']}
-    - Explanation: {rule_explanation_brief}
-    - Component: {example_issue['component']}
-
-    Please correct the issue in the Java class and return only the corrected code. No additional comments, explanations, or formatting are needed.
-    """
-
-
-    prompt = f"""
-    System message: You are a Java programming master. Use the rule details provided to identify and correct the specific issue in the Java code. Return the corrected code in JSON format.
-
-    Task: Correct the identified issue in the provided Java class
-        and return the corrected class in its entirety.
-
-    Issue Details:
-    - Rule: {example_issue['rule']} - Severity: {rule_details['rule']['severity']}
-    - Impact: {rule_details['rule']['impacts'][0]['softwareQuality']}
-    - Explanation: {rule_explanation_brief}
-    - Component: {example_issue['component']}
-    - Location: {line_info} and generally the file {example_issue['component']}
-    - Message: {example_issue['message']}
-    - Issue Type: {example_issue['type']}
-
-    Return: The corrected Java class code formatted as a JSON string. The structure should be:
-    {{
-        "result": "<insert corrected Java class code here>"
-    }}
-
-    Note: Ensure the entire Java class code is encapsulated within the JSON structure, using proper JSON string escaping where necessary.
-    """
-
-    return test_prompt
 
 def extract_relevant_parts(md_description):
     # Updated patterns for the start of sections
