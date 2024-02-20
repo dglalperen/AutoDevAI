@@ -4,6 +4,7 @@ import os
 import dotenv
 import re
 from pathlib import Path
+from utils.colored_print.colored_print import print_blue,print_green,print_red,print_yellow
 
 def list_repositories_in_folder(folder_path):
     """List directories in the given folder path."""
@@ -11,9 +12,9 @@ def list_repositories_in_folder(folder_path):
 
 
 def introduce_program():
-    print("\nWelcome to AutoDevAI!")
-    print("This program autonomously improves and evolves Java software repositories.")
-    print("Let's get started.\n")
+    print_green("\nWelcome to AutoDevAI!")
+    print_green("This program autonomously improves and evolves Java software repositories.")
+    print_green("Let's get started.\n")
 
 def get_repository():
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +24,7 @@ def get_repository():
     available_repos = list_repositories_in_folder(repos_path)
 
     if available_repos:
-        print("\nAvailable local repositories:")
+        print_blue("\nAvailable local repositories:")
         for idx, repo in enumerate(available_repos):
             print(f"{idx}. {repo}")
 
@@ -35,7 +36,7 @@ def get_repository():
         elif is_valid_github_url(choice):
             return choice
         else:
-            print("Invalid input. Please enter a valid index or GitHub URL.\n")
+            print_red("Invalid input. Please enter a valid index or GitHub URL.\n")
             return get_repository()
     else:
         return input("\nEnter the GitHub URL of the Java repository you'd like to auto-develop: ").strip()
@@ -49,7 +50,7 @@ def ask_to_fork_and_clone():
         elif choice == "2":
             return False
         else:
-            print("Invalid input. Please enter 1 or 2.")
+            print_red("Invalid input. Please enter 1 or 2.")
 
 
 def fork_and_clone_repository(repo_url):
@@ -65,7 +66,7 @@ def fork_and_clone_repository(repo_url):
         clone_repo(forked_repo.clone_url)
         return forked_repo.clone_url
     except Exception as e:
-        print(f"Error occurred during forking and cloning: {e}")
+        print_red(f"Error occurred during forking and cloning: {e}")
         return None
 
 def is_valid_github_url(url):
@@ -85,9 +86,9 @@ def get_number_of_generations():
             if generations > 0:
                 return generations
             else:
-                print("Please enter a positive integer.")
+                print_blue("Please enter a positive integer.")
         except ValueError:
-            print("Invalid input. Please enter an integer.")
+            print_red("Invalid input. Please enter an integer.")
             
 def commit_changes(repo_path, message):
     """
@@ -111,6 +112,6 @@ def commit_changes(repo_path, message):
     
     # Check if commit was successful
     if commit_status == 0:
-        print("Changes committed successfully.")
+        print_green("Changes committed successfully.")
     else:
-        print("No changes to commit or commit failed.")
+        print_yellow("No changes to commit or commit failed.")

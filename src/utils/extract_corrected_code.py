@@ -1,4 +1,5 @@
 import json
+from pydantic import BaseModel
 import re
 
 def unescape_java_code(code):
@@ -6,7 +7,7 @@ def unescape_java_code(code):
     # Replace escaped newlines and escaped backslashes
     return code.encode().decode('unicode_escape')
 
-def extract_corrected_code(response):
+def extract_corrected_code_json(response):
     # Improved regex to capture more complex JSON structures
     json_match = re.search(r"```json\s*\n?(\{[\s\S]*?\})\s*```", response)
     if json_match:
@@ -30,15 +31,38 @@ def extract_corrected_code(response):
     print("No corrected code found in the response.")
     return ''
 
-if __name__ == "__main__":
-    response = """
-    The rule java:S2699 is a SonarQube rule that requires at least one assertion in each test case.
+def extract_corrected_code(parsed_response):
+    if parsed_response.result:
+        return parsed_response.result
 
-    ```json
-    {
-        "result": "package com.CarRentalAgency;\\n\\nimport org.junit.jupiter.api.Test;\\nimport org.springframework.boot.test.context.SpringBootTest;\\nimport static org.junit.jupiter.api.Assertions.assertTrue;\\n\\n@SpringBootTest\\nclass CarRentalAgencyApplicationTests {\\n\\n\\t@Test\\n\\tvoid contextLoads() {\\n\\t\\tassertTrue(true);\\n\\t}\\n\\n}\\n"
-    }
-    ```
-    """
-    java_code = extract_corrected_code(response)
-    print(java_code)
+    print("No corrected code found in the response.")
+    return ''
+
+def extract_json_from_response(response):
+    json_start = response.find('```json') + len('```json')
+    json_end = response.find('```', json_start)
+    json_part = response[json_start:json_end].strip()
+
+    return json_part
+
+# Mock Pydantic model simulating the actual JavaClassModel
+class MockJavaClassModel(BaseModel):
+    result: str
+
+# Updated function to work with Pydantic model instance
+def extract_corrected_code_from_model(parsed_response: MockJavaClassModel):
+    if parsed_response.result:
+        return parsed_response.result
+    print("No corrected code found in the response.")
+    return ''
+
+# Test the updated function
+if __name__ == "__main__":
+    # Creating a mock instance of the model with sample corrected code
+    mock_response = MockJavaClassModel(result="public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, World!\");\n    }\n}")
+
+    # Extracting corrected code using the updated function
+    corrected_code = extract_corrected_code_from_model(mock_response)
+
+    # Print the extracted code
+    print(corrected_code)
