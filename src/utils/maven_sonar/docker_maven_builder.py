@@ -70,7 +70,7 @@ def list_maven_projects(repos_dir):
 
 def main():
     windows_dir="/Users/adagli/Desktop/Coding/Uni/Projekt-2/AutoDevAI/Repos"
-    mac_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos"  # Provide the absolute path
+    mac_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos"
     maven_projects = list_maven_projects(windows_dir)
 
     # Display Maven projects and let the user choose
@@ -82,7 +82,7 @@ def main():
     if 0 <= selected_index < len(maven_projects):
         selected_project = maven_projects[selected_index]
         print(f"Building Maven project in {selected_project}...")
-        success, error_message = run_maven_build_docker(selected_project)  # Or run_maven_build_docker
+        success, error_message = run_maven_build_docker(selected_project)
         if success:
             print(f"Build was successful for {selected_project}.")
         else:

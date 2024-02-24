@@ -1,20 +1,17 @@
 import os
 import json
-from utils.build_error_fix_prompt import build_error_fix_prompt
-from utils.build_maven import run_maven_build_docker
-from utils.clone_repo import clone_repo
-from utils.console_interaction import (fork_and_clone_repository, get_number_of_generations, introduce_program,
-                                       get_repository, ask_to_fork_and_clone, is_valid_github_url)
-from utils.prepare_prompt import fetch_rule_details, setup_prompt
-from utils.setup_qa_retriever import setup_qa_retriever
-from utils.sonar_backend import get_filtered_issues
-from utils.apply_fix_and_log import apply_fix_and_log
-from utils.processed_issues_operations import load_processed_issues, save_processed_issue
-from utils.extract_corrected_code import extract_corrected_code, extract_corrected_code_json
-from utils.sonarqube.sonar_scan import create_sonar_project_file_if_not_exists, run_sonarqube_scan_docker
-from utils.colored_print.colored_print import print_blue,print_green,print_red,print_yellow
-from langchain_core.output_parsers import JsonOutputParser
-from utils.prepare_prompt import JavaClassModel
+from utils.console_helper.console_interaction import ask_number_of_generations, ask_select_or_enter_repository, ask_to_fork_and_clone, introduce_program
+from utils.console_helper.github_helper import clone_repo, fork_and_clone_repository, is_valid_github_url
+from utils.langchain_helper.apply_fix_and_log import apply_fix_and_log
+from utils.langchain_helper.extract_corrected_code import extract_corrected_code_json
+from utils.langchain_helper.processed_issues_operations import load_processed_issues, save_processed_issue
+from utils.langchain_helper.setup_qa_retriever import setup_qa_retriever
+from utils.maven_sonar.docker_sonar_scan import create_sonar_project_file_if_not_exists, run_sonarqube_scan_docker
+from utils.maven_sonar.sonar_backend_helper import get_filtered_issues
+from utils.prompts.build_error_fix_prompt import build_error_fix_prompt
+from utils.maven_sonar.docker_maven_builder import run_maven_build_docker
+from utils.prompts.prepare_prompt import fetch_rule_details, setup_prompt
+from utils.print_utils.colored_print import print_blue,print_green,print_red,print_yellow
 
 GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -26,9 +23,9 @@ ORGANIZATION = "dglalperen"
 def main():
     introduce_program()
     
-    repo_choice = get_repository()
+    repo_choice = ask_select_or_enter_repository()
     cloned_repo_path = None
-    generations = get_number_of_generations()
+    generations = ask_number_of_generations()
 
     if is_valid_github_url(repo_choice):
         fork_and_clone = ask_to_fork_and_clone()
@@ -89,8 +86,8 @@ def main():
         qa = setup_qa_retriever(cloned_repo_path, model='gpt-4-0125-preview')
        
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        log_path = os.path.join(script_dir, 'issue_resolutions.log')
-        processed_issues_file = os.path.join(script_dir, 'processed_issues.json')
+        log_path = os.path.join(script_dir, '../ResultLogs/issue_resolutions.log')
+        processed_issues_file = os.path.join(script_dir, '../ResultLogs/processed_issues.json')
         
         # Load previously processed issues to avoid reprocessing
         processed_issues = load_processed_issues(processed_issues_file)
