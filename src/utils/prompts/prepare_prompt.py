@@ -30,9 +30,6 @@ def setup_prompt(issue_group_key, example_issue, rule_details):
     # Split the issue group key to extract the rule key
     rule_key = issue_group_key.split(':', 1)[0]
 
-    # Setup for JSON output parsing instructions
-    format_instructions = setup_json_output_parser()
-
     # Rule explanation from Markdown description or a default message
     rule_explanation_md = rule_details.get('rule', {}).get('mdDesc', "No additional rule details available.")
 
@@ -43,59 +40,23 @@ def setup_prompt(issue_group_key, example_issue, rule_details):
     line_info = f"Around Line {example_issue['line']}" if 'line' in example_issue else "Check the file in general"
 
     # Construct the task prompt with structured information
-    prompt_test = f"""
-    **Task**: Update a Java class to address the specified SonarQube rule violation. Provide the complete updated class. Avoid partial code or explanatory comments.
-
-    **Issue Details**:
-    - **Rule**: {example_issue['rule']} (Severity: {rule_details['rule']['severity']})
-    - **Brief Explanation**: {rule_explanation_brief}
-    - **Target File/Component**: {example_issue['component']}
-    - **Location in File**: {line_info}
-    - **Issue Description**: {example_issue['message']}
-    - **Issue Type**: {example_issue['type']}
-
-    **Formatting Instructions**:
-    ```{format_instructions}```
-
-    Ensure adherence to the task as described to avoid incorrect outcomes.
+    prompt = f"""
+    {{
+        "task": "Update the following Java class to resolve a specific SonarQube rule violation. Ensure the complete updated class is returned in JSON format as specified.",
+        "issue_details": {{
+            "rule": "{example_issue['rule']}",
+            "severity": "{rule_details['rule']['severity']}",
+            "explanation": "{rule_explanation_brief}",
+            "component": "{example_issue['component']}",
+            "location": "{line_info}",
+            "description": "{example_issue['message']}",
+            "type": "{example_issue['type']}"
+        }},
+        "format_instructions": "Return the updated Java class in a JSON object with the key 'updated_java_class'. Include all package imports and ensure there are no shortenings or explanatory comments."
+    }}
     """
 
-    return prompt_test
-
-
-# def setup_prompt(issue_group_key, example_issue, rule_details):
-#     parts = issue_group_key.split(':', 1)
-#     rule_key = parts[0]
-#     format_instructions = setup_json_output_parser()
-
-#     # Use Markdown description directly
-#     rule_explanation_md = rule_details['rule']['mdDesc'] if rule_details else "No additional rule details available."
-
-#     # Extract key parts of the rule explanation
-#     rule_explanation_brief = extract_relevant_parts(rule_explanation_md)
-
-#     line_info = f"Around Line {example_issue['line']}" if 'line' in example_issue else "Check the file in general"
-    
-#     prompt_test = f"""
-#     System message: You are tasked with updating a Java class based on the sonar issue being violated.
-#     Provide the updated class in full, without any shortenings or explanatory comments.
-    
-#     Issue Summary:
-#     - Rule: {example_issue['rule']} | Severity: {rule_details['rule']['severity']}
-#     - Rule Explanation Briefly: {rule_explanation_brief}
-#     - File/Component to be updated: {example_issue['component']}
-#     - Specific Location of File to be updated: {line_info}
-#     - Description: {example_issue['message']}
-#     - Type: {example_issue['type']}
-    
-#     Format instructions for result:
-    
-#     ```{format_instructions}```
-    
-#     Do the Task exactly how it is described or you will get a wrong answer.
-#     """
-
-#     return prompt_test
+    return prompt
 
 def extract_relevant_parts(md_description):
     # Updated patterns for the start of sections
@@ -167,5 +128,3 @@ if __name__ == "__main__":
 
     # Print the formatted output to check if it is correct
     #print(formatted_output)
-
-

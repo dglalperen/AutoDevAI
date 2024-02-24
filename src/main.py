@@ -3,7 +3,7 @@ import json
 from utils.console_helper.console_interaction import ask_number_of_generations, ask_select_or_enter_repository, ask_to_fork_and_clone, introduce_program
 from utils.console_helper.github_helper import clone_repo, fork_and_clone_repository, is_valid_github_url
 from utils.langchain_helper.apply_fix_and_log import apply_fix_and_log
-from utils.langchain_helper.extract_corrected_code import extract_corrected_code_json
+from utils.langchain_helper.extract_updated_java_class import extract_updated_java_class
 from utils.langchain_helper.processed_issues_operations import load_processed_issues, save_processed_issue
 from utils.langchain_helper.setup_qa_retriever import setup_qa_retriever
 from utils.maven_sonar.docker_sonar_scan import create_sonar_project_file_if_not_exists, run_sonarqube_scan_docker
@@ -112,7 +112,7 @@ def main():
                 print_blue(f"Attempt {attempt + 1} to fix and build...")
                 
                 for issue in issues_in_group:
-                    fixed_code = extract_corrected_code_json(response['answer'])
+                    fixed_code = extract_updated_java_class(response['answer'])
                     apply_fix_and_log(issue, fixed_code, cloned_repo_path, log_path)
                     save_processed_issue(processed_issues_file, group_key)
 
@@ -126,7 +126,7 @@ def main():
                     error_fix_prompt = build_error_fix_prompt(error_message)
                     response = qa(error_fix_prompt)
                     
-                    fixed_code = extract_corrected_code_json(response['answer'])
+                    fixed_code = extract_updated_java_class(response['answer'])
                     if len(fixed_code) > 0:
                         apply_fix_and_log(issue, fixed_code, cloned_repo_path, log_path)
                     else:
