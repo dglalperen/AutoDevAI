@@ -48,7 +48,7 @@ def get_filtered_issues(project_key):
 
 def main():
     organization = "dglalperen"
-    project_key = "Java-BookStore"
+    project_key = "expense-tracker-api"
     #project_key = "dglalperen_Online-Banking-System"
     
     issues = get_issues(project_key)

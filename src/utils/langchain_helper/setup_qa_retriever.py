@@ -1,16 +1,17 @@
 import dotenv
 from langchain.text_splitter import Language
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationSummaryMemory
 from langchain.chat_models import ChatOpenAI
-from utils.load_java_documents_from_repo import load_java_documents_from_repo
+from utils.langchain_helper.java_doc_loader import load_java_documents_from_repo_new
+from utils.print_utils.colored_print import print_blue, print_green
+from langchain.vectorstores import Chroma
 
 dotenv.load_dotenv()
 
-def setup_qa_retriever(repo_path, model='gpt-4'):
+def setup_qa_retriever(repo_path, model='gpt-4-0125-preview'):
     """
     Set up the QA retriever with documents from a given Java repository.
 
@@ -23,26 +24,29 @@ def setup_qa_retriever(repo_path, model='gpt-4'):
     """
 
     # Load all java files from repo
-    documents = load_java_documents_from_repo(repo_path)
-    print(f"Number of documents: {len(documents)}")
+    java_documents = load_java_documents_from_repo_new(repo_path)
+    #print(f"Number of documents: {len(documents)}")
 
     # Split documents
     splitter = RecursiveCharacterTextSplitter.from_language(
         language=Language.JAVA, chunk_size=2000, chunk_overlap=200
     )
-    texts = splitter.split_documents(documents=documents)
-    print(f"Number of chunks: {len(texts)}")
-
+    splitted_java_documents = splitter.split_documents(documents=java_documents)
+    print_green(f"Number of chunks: {len(splitted_java_documents)}")
+    
+    embedding_function = OpenAIEmbeddings(disallowed_special=())
+    
     # Initialize vector database
-    db = Chroma.from_documents(texts, OpenAIEmbeddings(disallowed_special=()))
+    vectorstore = Chroma.from_documents(documents=splitted_java_documents,
+                                        embedding=embedding_function)
 
     # Set up retriever
-    retriever = db.as_retriever(search_types=["mmr"], search_kwargs={"k": 8})
-
+    retriever = vectorstore.as_retriever(search_types=["mmr"], search_kwargs={"k": 8})
+    
     # Initialize language model for QA retrieval
-    llm = ChatOpenAI(model=model, temperature=0.2)
+    llm = ChatOpenAI(model=model, temperature=0.4)
     memory = ConversationSummaryMemory(llm=llm, memory_key="chat_history", return_messages=True)
-    qa = ConversationalRetrievalChain.from_llm(llm, retriever=retriever, memory=memory)
+    qa = ConversationalRetrievalChain.from_llm(llm=llm, retriever=retriever, memory=memory)
 
     return qa
 
