@@ -1,1 +1,258 @@
-https://gitlab.com/wyd-weiss/exercise-generator
+this output looks good but i guess i forgot to adjust the correct key for extracting the json 
+import json
+import re
+
+def extract_updated_java_class(response):
+    """
+    Extracts the updated Java class from the OpenAI model's JSON output.
+
+    Parameters:
+    - response (str): The raw string output from the OpenAI model.
+
+    Returns:
+    - str: The extracted and unescaped Java class code, or an empty string if not found.
+    """
+    try:
+        # Find the JSON snippet within the response using a regular expression
+        json_match = re.search(r'```json\s*({.*?})\s*```', response, re.DOTALL)
+        if json_match:
+            json_string = json_match.group(1)
+            
+            # Parse the JSON string into a Python dictionary
+            parsed_json = json.loads(json_string)
+            
+            # Extract the 'updated_java_class' field containing the Java code
+            updated_java_class = parsed_json.get('updated_java_class', '')
+            if updated_java_class:
+                # Unescape Java code to interpret escape sequences like \n, \t, etc.
+                return updated_java_class.encode().decode('unicode_escape')
+
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+
+    # If no updated Java class is found or an error occurs, return an empty string
+    return ''
+
+this was the output:
+(langchain) (base) dglalperen@dglalperen src % python main.py
+
+Welcome to AutoDevAI!
+This program autonomously improves and evolves Java software repositories.
+Let's get started.
+
+--- Starting Generation 1 ---
+Compiling the project...
+Build successful.
+sonar-project.properties already exists in /Users/dglalperen/Desktop/Uni/Project-2/src/utils/console_helper/../../../Repos/expense-tracker-api
+Initiating SonarQube scan...
+SonarCloud scan completed successfully.
+Automatically selected SonarQube project: expense-tracker-api
+Total unique documents loaded: 26
+Number of chunks: 41
+
+
+DEBUG OPENAI Response: To address the SonarQube issue of duplicating the literal `"userId"` 5 times in the class `CategoryResource`, you can define a constant for `"userId"` and use it throughout the class. This way, you adhere to the DRY (Don't Repeat Yourself) principle, which SonarQube advocates for by raising this issue.
+
+Here is how the corrected class code could look, encapsulated in a JSON object format under the key `"corrected_class"`:
+
+```json
+{
+  "corrected_class": "package com.pairlearning.expensetracker.resources;\n\nimport com.pairlearning.expensetracker.domain.Category;\nimport com.pairlearning.expensetracker.services.CategoryService;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport javax.servlet.http.HttpServletRequest;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\n\n@RestController\n@RequestMapping(\"/api/categories\")\npublic class CategoryResource {\n\n    private static final String USER_ID = \"userId\";\n\n    @Autowired\n    private CategoryService categoryService;\n\n    // Assuming the rest of the class uses 'userId' in methods\n    // Replace occurrences of the literal \"userId\" with the constant USER_ID\n}\n"
+}
+```
+
+Note: The actual implementation details inside the class methods are not provided in the initial context, so they are not included in the corrected class code. You would replace each literal occurrence of `"userId"` with `USER_ID` within those method implementations. 
+
+Attempt 1 to fix and build...
+
+
+Handling Issue: Rule: java:S1192 - Message: Define a constant instead of duplicating this literal "userId" 5 times. - Component: expense-tracker-api:src/main/java/com/pairlearning/expensetracker/resources/CategoryResource.java
+
+
+No valid fix provided for AY3f5OBzqlbWBFrI0eB7. Skipping...
+Build successful.
+
+Final Prompt: 
+        Task: Improve a Java project by addressing specific issues identified by a SonarQube scan.
+
+        Here are some information about the issue and rule violation:
+        - Message: 'Define a constant instead of duplicating this literal "userId" 5 times.'
+        - Rule Key: 'java'
+        - Description: 'Why is this an issue?
+Duplicated string literals make the process of refactoring complex and error-prone, as any change would need to be propagated on all
+occurrences.
+
+Exceptions
+To prevent generating some false-positives, literals having less than 5 characters are excluded.
+
+How to fix it
+Instead, use constants to replace the duplicated string literals. Constants can be referenced from many places, but only need to be updated in a
+single place.
+
+Code examples
+Noncompliant code example
+With the default threshold of 3:
+
+public void run() {
+  prepare("action1");                              // Noncompliant - "action1" is duplicated 3 times
+  execute("action1");
+  release("action1");
+}
+
+@SuppressWarning("all")                            // Compliant - annotations are excluded
+private void method1() { /* ... */ }
+@SuppressWarning("all")
+private void method2() { /* ... */ }
+
+public String printInQuotes(String a, String b) {
+  return "'" + a + "'" + b + "'";               // Compliant - literal "'" has less than 5 characters and is excluded
+}
+
+Compliant solution
+
+private static final String ACTION_1 = "action1";  // Compliant
+
+public void run() {
+  prepare(ACTION_1);                               // Compliant
+  execute(ACTION_1);
+  release(ACTION_1);
+}
+
+'
+        - Affected File: 'expense-tracker-api:src/main/java/com/pairlearning/expensetracker/resources/TransactionResource.java'
+
+        Below is the Java class code from the file 'expense-tracker-api:src/main/java/com/pairlearning/expensetracker/resources/TransactionResource.java' that needs refinement:
+
+        ----------
+        package com.pairlearning.expensetracker.resources;
+
+import com.pairlearning.expensetracker.domain.Transaction;
+import com.pairlearning.expensetracker.services.TransactionService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/categories/{categoryId}/transactions")
+public class TransactionResource {
+
+    @Autowired
+    TransactionService transactionService;
+
+    @GetMapping("")
+    public ResponseEntity<List<Transaction>> getAllTransactions(HttpServletRequest request,
+                                                                @PathVariable("categoryId") Integer categoryId) {
+        int userId = (Integer) request.getAttribute("userId");
+        List<Transaction> transactions = transactionService.fetchAllTransactions(userId, categoryId);
+        return new ResponseEntity<>(transactions, HttpStatus.OK);
+    }
+
+    @GetMapping("/{transactionId}")
+    public ResponseEntity<Transaction> getTransactionById(HttpServletRequest request,
+                                                          @PathVariable("categoryId") Integer categoryId,
+                                                          @PathVariable("transactionId") Integer transactionId) {
+        int userId = (Integer) request.getAttribute("userId");
+        Transaction transaction = transactionService.fetchTransactionById(userId, categoryId, transactionId);
+        return new ResponseEntity<>(transaction, HttpStatus.OK);
+    }
+
+    @PostMapping("")
+    public ResponseEntity<Transaction> addTransaction(HttpServletRequest request,
+                                                      @PathVariable("categoryId") Integer categoryId,
+                                                      @RequestBody Map<String, Object> transactionMap) {
+        int userId = (Integer) request.getAttribute("userId");
+        Double amount = Double.valueOf(transactionMap.get("amount").toString());
+        String note = (String) transactionMap.get("note");
+        Long transactionDate = (Long) transactionMap.get("transactionDate");
+        Transaction transaction = transactionService.addTransaction(userId, categoryId, amount, note, transactionDate);
+        return new ResponseEntity<>(transaction, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{transactionId}")
+    public ResponseEntity<Map<String, Boolean>> updateTransaction(HttpServletRequest request,
+                                                                  @PathVariable("categoryId") Integer categoryId,
+                                                                  @PathVariable("transactionId") Integer transactionId,
+                                                                  @RequestBody Transaction transaction) {
+        int userId = (Integer) request.getAttribute("userId");
+        transactionService.updateTransaction(userId, categoryId, transactionId, transaction);
+        Map<String, Boolean> map = new HashMap<>();
+        map.put("success", true);
+        return new ResponseEntity<>(map, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{transactionId}")
+    public ResponseEntity<Map<String, Boolean>> deleteTransaction(HttpServletRequest request,
+                                                                  @PathVariable("categoryId") Integer categoryId,
+                                                                  @PathVariable("transactionId") Integer transactionId) {
+        int userId = (Integer) request.getAttribute("userId");
+        transactionService.removeTransaction(userId, categoryId, transactionId);
+        Map<String, Boolean> map = new HashMap<>();
+        map.put("success", true);
+        return new ResponseEntity<>(map, HttpStatus.OK);
+    }
+}
+
+        ----------
+
+        Instructions: 
+        1. Analyze the provided issue details and Java class code.
+        2. Apply necessary modifications to resolve the SonarQube issue.
+        3. Format the updated Java class code as a JSON object with the key 'corrected_class'.
+
+        I only want the update java class as a JSON object with the key 'corrected_class' back.
+        Do not respond with any other information or additional comments or the task is failed.
+        Output the updated Java class in its entirety without shortenings or missing code. It is extremly important that you return the whole updated class back in the specified JSON format.
+    
+
+
+DEBUG OPENAI Response: To address the SonarQube issue of duplicating the literal `"userId"` 5 times in the `TransactionResource` class of the expense tracker API project, you can define a constant for `"userId"` and use this constant instead of the literal string throughout the class. This approach reduces duplication and makes the code cleaner and easier to maintain.
+
+Here's how you can modify the `TransactionResource` class:
+
+1. Define a private static final String constant at the class level.
+2. Replace all instances of the literal `"userId"` with the defined constant.
+
+Below is the corrected class code presented in a JSON object with the key `corrected_class`:
+
+```json
+{
+  "corrected_class": "package com.pairlearning.expensetracker.resources;\n\nimport com.pairlearning.expensetracker.domain.Transaction;\nimport com.pairlearning.expensetracker.services.TransactionService;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport javax.servlet.http.HttpServletRequest;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\n\n@RestController\n@RequestMapping(\"/api/categories/{categoryId}/transactions\")\npublic class TransactionResource {\n\n    @Autowired\n    TransactionService transactionService;\n\n    private static final String USER_ID = \"userId\";\n\n    @GetMapping(\"\")\n    public ResponseEntity<List<Transaction>> getAllTransactions(HttpServletRequest request,\n                                                                @PathVariable(\"categoryId\") Integer categoryId) {\n        int userId = (Integer) request.getAttribute(USER_ID);\n        List<Transaction> transactions = transactionService.fetchAllTransactions(userId, categoryId);\n        return new ResponseEntity<>(transactions, HttpStatus.OK);\n    }\n\n    @GetMapping(\"/{transactionId}\")\n    public ResponseEntity<Transaction> getTransactionById(HttpServletRequest request,\n                                                          @PathVariable(\"categoryId\") Integer categoryId,\n                                                          @PathVariable(\"transactionId\") Integer transactionId) {\n        int userId = (Integer) request.getAttribute(USER_ID);\n        Transaction transaction = transactionService.fetchTransactionById(userId, categoryId, transactionId);\n        return new ResponseEntity<>(transaction, HttpStatus.OK);\n    }\n\n    @PostMapping(\"\")\n    public ResponseEntity<Transaction> addTransaction(HttpServletRequest request,\n                                                      @PathVariable(\"categoryId\") Integer categoryId,\n                                                      @RequestBody Map<String, Object> transactionMap) {\n        int userId = (Integer) request.getAttribute(USER_ID);\n        Double amount = Double.valueOf(transactionMap.get(\"amount\").toString());\n        String note = (String) transactionMap.get(\"note\");\n        Long transactionDate = (Long) transactionMap.get(\"transactionDate\");\n        Transaction transaction = transactionService.addTransaction(userId, categoryId, amount, note, transactionDate);\n        return new ResponseEntity<>(transaction, HttpStatus.CREATED);\n    }\n}"
+}
+```
+
+This JSON object contains the corrected Java class code for `TransactionResource`, where the duplication of the literal `"userId"` is addressed by using a constant. 
+
+Attempt 1 to fix and build...
+
+
+Handling Issue: Rule: java:S1192 - Message: Define a constant instead of duplicating this literal "userId" 5 times. - Component: expense-tracker-api:src/main/java/com/pairlearning/expensetracker/resources/TransactionResource.java
+
+
+No valid fix provided for AY3f5OB7qlbWBFrI0eB9. Skipping...
+Build successful.
+
+DEBUG OPENAI Response: To address the SonarQube issue of duplicating the literal `"email"` three times in the `UserResource` class of the `expense-tracker-api` project, you can define a constant for the literal `"email"` and use it throughout the class. This approach not only resolves the duplication issue but also makes the code cleaner and easier to maintain, especially if the key needs to be changed in the future.
+
+Here's how the corrected `UserResource` class would look, encapsulated as a JSON object with the key `corrected_class`:
+
+```json
+{
+  "corrected_class": "package com.pairlearning.expensetracker.resources;\n\nimport com.pairlearning.expensetracker.Constants;\nimport com.pairlearning.expensetracker.domain.User;\nimport com.pairlearning.expensetracker.services.UserService;\nimport io.jsonwebtoken.Jwts;\nimport io.jsonwebtoken.SignatureAlgorithm;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.RequestBody;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\n\nimport java.util.Date;\nimport java.util.HashMap;\nimport java.util.Map;\n\n@RestController\n@RequestMapping(\"/api/users\")\n\npublic class UserResource {\n\n    @Autowired\n    UserService userService;\n\n    private static final String EMAIL_KEY = \"email\";\n\n    @PostMapping(\"/login\")\n    public ResponseEntity<Map<String, String>> loginUser(@RequestBody Map<String, Object> userMap) {\n        String email = (String) userMap.get(EMAIL_KEY);\n        String password = (String) userMap.get(\"password\");\n        User user = userService.validateUser(email, password);\n        return new ResponseEntity<>(generateJWTToken(user), HttpStatus.OK);\n    }\n\n    @PostMapping(\"/register\")\n    public ResponseEntity<Map<String, String>> registerUser(@RequestBody Map<String, Object> userMap) {\n        String firstName = (String) userMap.get(\"firstName\");\n        String lastName = (String) userMap.get(\"lastName\");\n        String email = (String) userMap.get(EMAIL_KEY);\n        String password = (String) userMap.get(\"password\");\n        User user = userService.registerUser(firstName, lastName, email, password);\n        return new ResponseEntity<>(generateJWTToken(user), HttpStatus.OK);\n    }\n\n    private Map<String, String> generateJWTToken(User user) {\n        long timestamp = System.currentTimeMillis();\n        String token = Jwts.builder().signWith(SignatureAlgorithm.HS256, Constants.API_SECRET_KEY)\n                .setIssuedAt(new Date(timestamp))\n                .setExpiration(new Date(timestamp + Constants.TOKEN_VALIDITY))\n                .claim(\"userId\", user.getUserId())\n                .claim(EMAIL_KEY, user.getEmail())\n                .claim(\"firstName\", user.getFirstName())\n                .claim(\"lastName\", user.getLastName())\n                .compact();\n        Map<String, String> map = new HashMap<>();\n        map.put(\"token\", token);\n        return map;\n    }\n}"
+}
+```
+
+In this corrected version, a private static final variable `EMAIL_KEY` is defined and used instead of the literal `"email"` throughout the class. This change addresses the SonarQube issue regarding the duplication of the literal `"email"`. 
+
+Attempt 1 to fix and build...
+
+
+Handling Issue: Rule: java:S1192 - Message: Define a constant instead of duplicating this literal "email" 3 times. - Component: expense-tracker-api:src/main/java/com/pairlearning/expensetracker/resources/UserResource.java
+
+No valid fix provided for AY3f5OB3qlbWBFrI0eB8. Skipping...
+Build successful.

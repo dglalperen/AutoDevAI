@@ -14,7 +14,7 @@ def clone_repo(repo_url):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     # Navigate up two directories to the project root
-    project_root = os.path.join(script_dir, '..', '..')
+    project_root = os.path.join(script_dir, '..', '..', '..')
     
     # Create the path to the Repos folder within your project's root directory
     repos_path = os.path.join(project_root, 'Repos')

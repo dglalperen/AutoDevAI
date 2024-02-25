@@ -1,24 +1,17 @@
 import json
 import os
-import shutil
 import datetime
+from utils.print_utils.colored_print import print_blue
 
-def apply_fix_and_log(issue, fixed_code, repo_path, log_path, backup=True):
+def apply_fix_and_log(issue, fixed_code, repo_path, log_path):
     issue_details = f"Rule: {issue['rule']} - Message: {issue['message']} - Component: {issue['component']}"
-    print("-" * 60)
-    print(f"\nHandling Issue: {issue_details}\n")
-    print("-" * 60)
+    print_blue(f"\nHandling Issue: {issue_details}\n")
     
     if not fixed_code.strip():
         print(f"No valid fix provided for {issue['key']}. Skipping...")
         return
 
     file_path = os.path.join(repo_path, issue['component'].split(':')[1])
-
-    if backup:
-        backup_path = f"{file_path}.backup"
-        shutil.copyfile(file_path, backup_path)
-        print(f"Backup of the original file saved to: {backup_path}")
 
     with open(file_path, 'w') as file:
         file.write(fixed_code)
@@ -30,9 +23,8 @@ def apply_fix_and_log(issue, fixed_code, repo_path, log_path, backup=True):
         'message': issue['message'],
         'component': issue['component'],
         'fixed_code_summary': fixed_code[:100] + '...' if len(fixed_code) > 100 else fixed_code,
-        'file_path': file_path,
-        'backup_path': backup_path if backup else None
-    }
+        'file_path': file_path
+        }
 
     with open(log_path, 'a') as log_file:
         json.dump(log_entry, log_file)

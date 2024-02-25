@@ -32,19 +32,13 @@ def setup_qa_retriever(repo_path, model='gpt-4-0125-preview'):
         language=Language.JAVA, chunk_size=2000, chunk_overlap=200
     )
     splitted_java_documents = splitter.split_documents(documents=java_documents)
-    print("Chunks: ")
-    print_blue(60*"-")
-    print_green(splitted_java_documents)
-    print_blue(60*"-")
     print_green(f"Number of chunks: {len(splitted_java_documents)}")
     
     embedding_function = OpenAIEmbeddings(disallowed_special=())
     
     # Initialize vector database
-    persist_directory = "chroma_db"
     vectorstore = Chroma.from_documents(documents=splitted_java_documents,
-                                        embedding=embedding_function,
-                                        persist_directory=persist_directory)
+                                        embedding=embedding_function)
 
     # Set up retriever
     retriever = vectorstore.as_retriever(search_types=["mmr"], search_kwargs={"k": 8})

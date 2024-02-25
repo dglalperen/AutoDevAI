@@ -10,7 +10,7 @@ def introduce_program():
 
 def ask_select_or_enter_repository():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.join(script_dir, '..', '..')
+    project_root = os.path.join(script_dir, '..', '..', '..')
     repos_path = os.path.join(project_root, 'Repos')
 
     available_repos = list_repositories_in_folder(repos_path)

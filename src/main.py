@@ -83,7 +83,9 @@ def main():
             grouped_issues[issue_group_key].append(issue)
 
         # For each group, get a fix from OpenAI
-        qa = setup_qa_retriever(cloned_repo_path, model='gpt-4-0125-preview')
+        model_4 = 'gpt-4-0125-preview'
+        model_3_5 = 'gpt-3.5-turbo-0125'
+        qa = setup_qa_retriever(cloned_repo_path, model=model_4)
        
         script_dir = os.path.dirname(os.path.abspath(__file__))
         log_path = os.path.join(script_dir, '../ResultLogs/issue_resolutions.log')
