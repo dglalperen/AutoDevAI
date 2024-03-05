@@ -1,8 +1,11 @@
 import requests
 import re
 import os
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 
-from utils.print_utils.colored_print import print_red, print_yellow
+def print_yellow(text):
+    print("\x1b[33m{}\x1b[0m".format(text))
+ 
 
 def fetch_rule_details(rule_key):
     try:
@@ -34,10 +37,18 @@ def get_file_content(component_key):
     except Exception as e:
         return str(e)
 
+def setup_format_instructions():
+    response_schemas = [ResponseSchema(name="updated_java_class", description="The updated Java class code, encapsulated in a JSON object.")]
+
+    output_parser = StructuredOutputParser.from_response_schemas(response_schemas) 
+    
+    format_instructions = output_parser.get_format_instructions()
+    
+    return format_instructions
 
 def setup_prompt(issue_group_key, example_issue, rule_details):
     # Split the issue group key to extract the rule key
-    rule_key = issue_group_key.split(':', 1)[0]
+    rule_key = issue_group_key.split(':')[1]
 
     # Rule explanation from Markdown description or a default message
     rule_explanation_md = rule_details.get('rule', {}).get('mdDesc', "No additional rule details available.")
@@ -46,11 +57,8 @@ def setup_prompt(issue_group_key, example_issue, rule_details):
     rule_explanation_brief = extract_relevant_parts(rule_explanation_md)
     original_java_class = get_file_content(example_issue['component'])
 
-    # Determine the specific line or general file area for the update
-    line_info = f"Around Line {example_issue['line']}" if 'line' in example_issue else "Check the file in general"
-    
-    prompt = f"""
-        Objective: Refactor the provided Java class to address a specific SonarQube issue, ensuring adherence to best practices and maintaining the integrity of the original functionality.
+    prompt_bad = f"""
+        Objective: Address the specified SonarQube issue by refactoring the Java class code, ensuring adherence to development best practices while preserving the original functionality.
 
         Issue Summary:
         - Message: '{example_issue["message"]}'
@@ -64,29 +72,42 @@ def setup_prompt(issue_group_key, example_issue, rule_details):
         {"-" * 30}
 
         Instructions:
-        1. Review the issue summary and the provided Java class code.
-        2. Make the necessary changes to the Java class to resolve the SonarQube issue.
-        3. **Crucially**, return the refactored Java class code formatted as a JSON object with the key 'updated_java_class'. The entire class code must be included without any omissions or abbreviations.
+        1. Analyze the issue summary and Java class code provided.
+        2. Modify the Java class to address the identified SonarQube issue.
+        3. Return the refactored Java class code encapsulated in a JSON object with the key 'updated_java_class', ensuring all code is included without truncation.
 
-        Positive Example:
-        - Issue: Define a constant instead of duplicating this literal 'example' multiple times.
-        - Original Class Snippet: 
-            public void exampleMethod() {{
-                System.out.println("example");  // Noncompliant
-                System.out.println("example");  // Noncompliant
-            }}
+        Note: Do not include any additional comments outside the JSON structure.
 
-        Example of Expected Output:
-        {{
-        "updated_java_class": "public class ExampleClass {{\\n    private static final String EXAMPLE_CONSTANT = \\"example\\";\\n    public void exampleMethod() {{\\n        System.out.println(EXAMPLE_CONSTANT);\\n        System.out.println(EXAMPLE_CONSTANT);\\n    }}\\n}}"
-        }}
+        Be mindful of the following:
+        1. Retain all original elements, like imports and annotations, in the updated class.
+        2. Avoid abbreviations or alterations that could affect code clarity or functionality.
 
-        Negative Examples to Avoid:
-        1. Omitting Original Elements: Ensure that all original elements, including necessary imports and class-level annotations, are retained in the updated class.
-        2. Avoiding Shortenings: Do not shorten methods or variables, e.g., 'exMethod' instead of 'exampleMethod', as this can alter the intended functionality or readability of the class.
-
-        Important: The response must consist solely of the updated Java class code in the specified JSON format. Any deviation from these instructions, including missing the JSON structure or omitting parts of the class, will result in an unsuccessful task completion.
-""".strip()
+        Ensure the response solely contains the updated Java class in the required JSON format for successful task completion.
+    """.strip()
+    
+    prompt = f"""
+    Lets work on my java project. I have a class that has a SonarQube issue. I want you to fix this issue and return the whole java class back without any truncations (including imports)
+    
+    This is the current state of the java class ({example_issue["component"]}):
+    
+    "{original_java_class}"
+    
+    this is the actual issue description:
+    "{example_issue["message"]}"
+    
+    I need the response in this format:
+    ```json
+    {{
+        "updated_java_class": string  // The updated Java class code, encapsulated in a JSON object.
+    }}
+    ```
+    
+    YOUR RESPONSE JSON:
+    """.strip()
+    
+    print(60*"-")
+    print_yellow(f"DEBUG: Prompt: {prompt}")
+    print(60*"-")
     
     return prompt
 
@@ -140,21 +161,21 @@ def test_get_file_content():
     print(file_content)
     
 if __name__ == "__main__":
-    # Fetch rule details
-    #rule_details = fetch_rule_details("java:S1192")
+    #Fetch rule details
+    rule_details = fetch_rule_details("java:S1192")
 
-    # Prepare the prompt using the 'prepare_prompt2' function
-    # prompt = setup_prompt("java:S1192:src/main/java/com/rentalcar/agency/CarRentalAgency.java", {
-    #     "key": "dglalperen_Rental-Car-Agency:src/main/java/com/rentalcar/agency/CarRentalAgency.java:java:S1192",
-    #     "rule": "java:S1192",
-    #     "severity": "MAJOR",
-    #     "component": "dglalperen_Rental-Car-Agency:src/main/java/com/rentalcar/agency/CarRentalAgency.java",
-    #     "line": 13,
-    #     "message": "String literals should not be duplicated",
-    #     "type": "CODE_SMELL"
-    #     }, rule_details)
-    # Print the prepared prompt
-    #print(prompt)
+    #Prepare the prompt using the 'prepare_prompt2' function
+    prompt = setup_prompt("java:S1192:src/main/java/com/rentalcar/agency/CarRentalAgency.java", {
+        "key": "dglalperen_Rental-Car-Agency:src/main/java/com/rentalcar/agency/CarRentalAgency.java:java:S1192",
+        "rule": "java:S1192",
+        "severity": "MAJOR",
+        "component": "dglalperen_Rental-Car-Agency:src/main/java/com/rentalcar/agency/CarRentalAgency.java",
+        "line": 13,
+        "message": "String literals should not be duplicated",
+        "type": "CODE_SMELL"
+        }, rule_details)
+    #Print the prepared prompt
+    print(prompt)
 
     # For testing purposes, you might want to simulate an AI response here
     # Example AI response (modify as needed for your tests)
@@ -165,4 +186,8 @@ if __name__ == "__main__":
 
     # Print the formatted output to check if it is correct
     #print(formatted_output)
-    test_get_file_content()
+    
+    
+    #test_get_file_content()
+    
+    #setup_format_instructions()
