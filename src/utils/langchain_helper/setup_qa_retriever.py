@@ -1,15 +1,19 @@
 import dotenv
 from langchain.text_splitter import Language
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai.chat_models import ChatOpenAI
+from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationSummaryMemory
-from langchain.chat_models import ChatOpenAI
 from utils.langchain_helper.java_doc_loader import load_java_documents_from_repo_new
-from utils.print_utils.colored_print import print_blue, print_green
-from langchain.vectorstores import Chroma
+from utils.print_utils.colored_print import print_green
+from langchain_community.vectorstores import chroma
+from langchain_core.pydantic_v1 import BaseModel, Field
 
 dotenv.load_dotenv()
+
+class JsonResponseSchema(BaseModel):
+    updated_java_class: str = Field(description="The updated Java class code.", example="public class MyClass { ... }")
 
 def setup_qa_retriever(repo_path, model='gpt-4-0125-preview'):
     """
@@ -37,14 +41,14 @@ def setup_qa_retriever(repo_path, model='gpt-4-0125-preview'):
     embedding_function = OpenAIEmbeddings(disallowed_special=())
     
     # Initialize vector database
-    vectorstore = Chroma.from_documents(documents=splitted_java_documents,
+    vectorstore = chroma.Chroma.from_documents(documents=splitted_java_documents,
                                         embedding=embedding_function)
 
     # Set up retriever
     retriever = vectorstore.as_retriever(search_types=["mmr"], search_kwargs={"k": 8})
     
     # Initialize language model for QA retrieval
-    llm = ChatOpenAI(model=model, temperature=0.4)
+    llm = ChatOpenAI(model=model, temperature=0)
     memory = ConversationSummaryMemory(llm=llm, memory_key="chat_history", return_messages=True)
     qa = ConversationalRetrievalChain.from_llm(llm=llm, retriever=retriever, memory=memory)
 

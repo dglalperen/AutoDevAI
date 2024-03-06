@@ -51,9 +51,3 @@ Probleme:
 --> Possible Solution: instead of trying to extract the code from the response
     in a specific format, we can try to improve the prompt to just return the whole class
     --> versucht aber nicht wirklich erfolgreich
-
-Offene Punkte:
-- Sonar Scan automatisieren
-
-uwe schöning theoretische infor kurzgefasst
-https://www.amazon.de/s?k=uwe+sch%C3%B6ning+theoretische+informatik+kurz+gefasst&crid=7330EUIK0DDT&sprefix=uwe+sch%C3%B6ning+%2Caps%2C167&ref=nb_sb_ss_ts-doa-p_2_13

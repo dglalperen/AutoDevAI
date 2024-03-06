@@ -1,6 +1,5 @@
-from pydantic import BaseModel, Field
 from utils.langchain_helper.setup_qa_retriever import setup_qa_retriever
-from utils.print_utils.colored_print import print_blue, print_green, print_red
+from utils.print_utils.colored_print import print_blue
 
 def start_conversation(qa):
     print_blue("Welcome to the Java Repository QA Chatbot!")
@@ -12,11 +11,11 @@ def start_conversation(qa):
             print("Chatbot: Goodbye!")
             break
         
-        response = qa(user_input)
+        response = qa.invoke(user_input)
         print_blue(f"Chatbot: {response['answer']}")
 
 if __name__ == "__main__":
-    repo_path = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/maven-web-application-master"
+    repo_path = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/expense-tracker-api"
     model = "gpt-3.5-turbo-0613"
     #model = "gpt-4-1106-preview"
     qa = setup_qa_retriever(repo_path, model)

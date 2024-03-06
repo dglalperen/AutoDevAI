@@ -12,6 +12,9 @@ def apply_fix_and_log(issue, fixed_code, repo_path, log_path):
         return
 
     file_path = os.path.join(repo_path, issue['component'].split(':')[1])
+    print(60*"-")
+    print_blue(f"Expected file path: {file_path}")
+    print(60*"-")
 
     with open(file_path, 'w') as file:
         file.write(fixed_code)
