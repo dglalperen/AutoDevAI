@@ -55,7 +55,7 @@ def load_java_documents_from_repo_new(repo_path):
     documents = []
     for java_dir in java_directories:
         num_files = count_java_files(java_dir)
-        print(f"Loading {num_files} Java files from {java_dir}")  # Logging the number of Java files in the directory
+        #print(f"Loading {num_files} Java files from {java_dir}")  # Logging the number of Java files in the directory
         loader = GenericLoader.from_filesystem(
             path=java_dir,
             glob="**/*.java",
@@ -63,7 +63,7 @@ def load_java_documents_from_repo_new(repo_path):
             parser=LanguageParser(language=Language.JAVA, parser_threshold=500)
         )
         dir_documents = loader.load()
-        print(f"Loaded {len(dir_documents)} documents from {java_dir}")  # Logging the number of documents loaded from the directory
+        #print(f"Loaded {len(dir_documents)} documents from {java_dir}")  # Logging the number of documents loaded from the directory
         documents.extend(dir_documents)
 
     documents = remove_duplicate_documents(documents)

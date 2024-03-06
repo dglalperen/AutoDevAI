@@ -7,7 +7,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationSummaryMemory
 from utils.langchain_helper.java_doc_loader import load_java_documents_from_repo_new
 from utils.print_utils.colored_print import print_green
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import chroma
 from langchain_core.pydantic_v1 import BaseModel, Field
 
 dotenv.load_dotenv()
@@ -41,7 +41,7 @@ def setup_qa_retriever(repo_path, model='gpt-4-0125-preview'):
     embedding_function = OpenAIEmbeddings(disallowed_special=())
     
     # Initialize vector database
-    vectorstore = Chroma.from_documents(documents=splitted_java_documents,
+    vectorstore = chroma.Chroma.from_documents(documents=splitted_java_documents,
                                         embedding=embedding_function)
 
     # Set up retriever

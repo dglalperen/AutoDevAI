@@ -8,29 +8,27 @@ def setup_evaluation_prompt(original_code: str, updated_code: str, issue_descrip
     :return: A prompt string for evaluation.
     """
     prompt = f"""
-    Let me provide you with the original and updated versions of a Java class
-    after addressing a specific sonarqube issue.
-    
-    I need you to evaluate the updated class and determine if it has been correctly updated.
-    Especially pay attention to whether or not the updated class has no missing or incorrect parts.
-    
-    Please review both versions and the issue description to determine if the update is complete and accurate.
+        Let me provide you with the original and updated versions of a Java class after addressing a specific SonarQube issue.
 
-    Original Java Class:
-    {original_code}
+        The task is to evaluate whether the updated class correctly implements the necessary changes to address the issue and whether it maintains all other aspects of the original class without any omissions or incorrect modifications.
 
-    Updated Java Class:
-    {updated_code}
+        Review both the original and updated class code in light of the issue description. Confirm that the issue is resolved correctly in the updated class and that no original functionality or structure is missing or altered incorrectly.
 
-    Issue Description:
-    {issue_description}
+        Original Java Class:
+        {original_code}
 
-    I need the response in this format:
-    ```json
-    {{
-        "correctly_updated_class": boolean  // Boolean, whether the updated class has no missing or incorrect parts.
-    }}
-    ```
+        Updated Java Class:
+        {updated_code}
+
+        Issue Description:
+        {issue_description}
+
+        Please return the response in this JSON format:
+
+        ```json
+        {{
+            "correctly_updated_class": boolean  // Boolean, whether the updated class is correctly updated addressing the issue without any missing or incorrect parts.
+        }}
     
     """.strip()
     

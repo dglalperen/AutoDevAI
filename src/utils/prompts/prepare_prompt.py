@@ -57,34 +57,6 @@ def setup_prompt(issue_group_key, example_issue, rule_details):
     rule_explanation_brief = extract_relevant_parts(rule_explanation_md)
     original_java_class = get_file_content(example_issue['component'])
 
-    prompt_bad = f"""
-        Objective: Address the specified SonarQube issue by refactoring the Java class code, ensuring adherence to development best practices while preserving the original functionality.
-
-        Issue Summary:
-        - Message: '{example_issue["message"]}'
-        - Rule Key: '{rule_key}'
-        - Detailed Explanation: '{rule_explanation_brief}'
-        - Affected File: '{example_issue["component"]}'
-
-        Java Class to Refactor:
-        {"-" * 30}
-        {original_java_class}
-        {"-" * 30}
-
-        Instructions:
-        1. Analyze the issue summary and Java class code provided.
-        2. Modify the Java class to address the identified SonarQube issue.
-        3. Return the refactored Java class code encapsulated in a JSON object with the key 'updated_java_class', ensuring all code is included without truncation.
-
-        Note: Do not include any additional comments outside the JSON structure.
-
-        Be mindful of the following:
-        1. Retain all original elements, like imports and annotations, in the updated class.
-        2. Avoid abbreviations or alterations that could affect code clarity or functionality.
-
-        Ensure the response solely contains the updated Java class in the required JSON format for successful task completion.
-    """.strip()
-    
     prompt = f"""
     Lets work on my java project. I have a class that has a SonarQube issue. I want you to fix this issue and return the whole java class back without any truncations (including imports)
     

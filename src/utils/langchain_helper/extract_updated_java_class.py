@@ -9,25 +9,20 @@ def extract_correctly_updated(response: str) -> bool:
     :return: A boolean value extracted from the response or None if not found or invalid.
     """
     try:
-        # Ensure the response is stripped of leading and trailing whitespaces.
         response = response.strip()
 
-        # Try to load it directly as JSON first.
         try:
             parsed_json = json.loads(response)
-            # Extract the 'correctly_updated_class' value
             correctly_updated = parsed_json.get('correctly_updated_class')
         except json.JSONDecodeError:
-            # If direct JSON parsing fails, fall back to regex extraction.
             json_match = re.search(r'\{.*?\}', response, re.DOTALL)
             if json_match:
                 json_string = json_match.group(0).strip()
                 parsed_json = json.loads(json_string)
                 correctly_updated = parsed_json.get('correctly_updated_class')
             else:
-                return None  # No JSON structure found in the response.
+                return None
 
-        # Validate that the extracted value is indeed boolean
         if isinstance(correctly_updated, bool):
             return correctly_updated
         else:

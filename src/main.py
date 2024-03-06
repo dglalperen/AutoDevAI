@@ -20,6 +20,8 @@ SONARCLOUD_TOKEN = os.getenv("SONARCLOUD_TOKEN")
 DEBUG_GITHUB_URL = "https://github.com/dglalperen/Rental-Car-Agency.git"
 ORGANIZATION = "dglalperen"
 
+MAX_RETRY_ATTEMPTS = 3
+
 def main():
     introduce_program()
     
@@ -66,9 +68,6 @@ def main():
 
         grouped_issues = {}
         for issue in issues:
-            print(60*"-")
-            print_blue(f"Processing issue: {issue}")
-            print(60*"-")
             component = issue['component'].split(':', 1)[1]
             issue_group_key = f"{issue['rule']}:{component}"
             if issue_group_key not in grouped_issues:
@@ -81,44 +80,37 @@ def main():
         processed_issues = load_processed_issues(processed_issues_file)
 
         for group_key, issues_in_group in grouped_issues.items():
-            print(60*"-")
-            print_blue(f"Processing group {group_key}...")
-            print_blue(f"Group contains {len(issues_in_group)} issues.")
-            print_blue(f"First issue: {issues_in_group[0]}")
-            print(60*"-")
-            if group_key in processed_issues:
-                print_blue(f"Group {group_key} has already been processed. Skipping...")
-                continue
+            attempt_count = 0
 
-            first_issue = issues_in_group[0]
-            rule_details = fetch_rule_details(first_issue['rule'])
-            original_java_class = get_file_content(first_issue['component'])
-            prompt_text = setup_prompt(group_key, first_issue, rule_details)
-            qa_response = qa.invoke(prompt_text)
-            response_text = qa_response.get('answer', '') if isinstance(qa_response, dict) else ''
-            
-            print_blue("DEBUG: Response from QA model:")
-            print_blue(response_text)
-            print(60*"-")
-            
-            updated_java_class = extract_updated_java_class(response_text)
+            while attempt_count < MAX_RETRY_ATTEMPTS:
+                attempt_count += 1
+                print_blue(f"Attempt {attempt_count} for fixing issues in group {group_key}...")
 
-            feedback_prompt = setup_evaluation_prompt(original_java_class, updated_java_class, first_issue['message'])
-            feedback_response = evaluate_llm_response(feedback_prompt)
-            is_correctly_updated = extract_correctly_updated(feedback_response)
-            
-            print_yellow("DEBUG: Feedback response text:")
-            print_yellow(feedback_response)
-            print_yellow("DEBUG: Is correctly updated?")
-            print_yellow(is_correctly_updated)
+                first_issue = issues_in_group[0]
+                rule_details = fetch_rule_details(first_issue['rule'])
+                original_java_class = get_file_content(first_issue['component'])
+                prompt_text = setup_prompt(group_key, first_issue, rule_details)
+                qa_response = qa.invoke(prompt_text)
+                response_text = qa_response.get('answer', '') if isinstance(qa_response, dict) else ''
+                
+                print_blue("DEBUG: Response from QA model:")
+                print_blue(response_text)
 
-            if is_correctly_updated:
-                print_green(f"The updated class for {group_key} has been correctly updated.")
-                for issue in issues_in_group:
-                    apply_fix_and_log(issue, updated_java_class, cloned_repo_path, log_path)
-                save_processed_issue(processed_issues_file, group_key)
-            else:
-                print_red(f"The updated class for {group_key} has not been correctly updated. Need further review.")
+                updated_java_class = extract_updated_java_class(response_text)
+                feedback_prompt = setup_evaluation_prompt(original_java_class, updated_java_class, first_issue['message'])
+                feedback_response = evaluate_llm_response(feedback_prompt)
+                is_correctly_updated = extract_correctly_updated(feedback_response)
+
+                if is_correctly_updated:
+                    print_green(f"The updated class for {group_key} has been correctly updated.")
+                    for issue in issues_in_group:
+                        apply_fix_and_log(issue, updated_java_class, cloned_repo_path, log_path)
+                    save_processed_issue(processed_issues_file, group_key)
+                    break
+                else:
+                    print_red(f"Attempt {attempt_count} for {group_key} was unsuccessful.")
+                    if attempt_count == MAX_RETRY_ATTEMPTS:
+                        print_red(f"All attempts for {group_key} have been exhausted. Moving on to the next group.")
 
             processed_issues[group_key] = True
             
