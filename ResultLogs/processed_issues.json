@@ -1,0 +1,5 @@
+{
+    "java:S1192:src/main/java/com/pairlearning/expensetracker/resources/CategoryResource.java": "unprocessed",
+    "java:S1192:src/main/java/com/pairlearning/expensetracker/resources/TransactionResource.java": "unprocessed",
+    "java:S1192:src/main/java/com/pairlearning/expensetracker/resources/UserResource.java": "processed"
+}

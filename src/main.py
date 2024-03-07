@@ -20,8 +20,6 @@ SONARCLOUD_TOKEN = os.getenv("SONARCLOUD_TOKEN")
 DEBUG_GITHUB_URL = "https://github.com/dglalperen/Rental-Car-Agency.git"
 ORGANIZATION = "dglalperen"
 
-MAX_RETRY_ATTEMPTS = 3
-
 def main():
     introduce_program()
     
@@ -45,6 +43,10 @@ def main():
     
     qa = setup_qa_retriever(cloned_repo_path, model='gpt-4-0125-preview')
 
+    # Define processed_issues_file here before its first use
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    processed_issues_file = os.path.join(script_dir, '../ResultLogs/processed_issues.json')
+
     for generation in range(1, generations + 1):
         print_blue(f"\n--- Starting Generation {generation} ---")
         build_result, error_message = run_maven_build_docker(cloned_repo_path)
@@ -64,59 +66,45 @@ def main():
 
         if not issues:
             print_yellow(f"No issues found for project: {project_name}.")
-            break
+            continue
 
         grouped_issues = {}
+        processed_issues = load_processed_issues(processed_issues_file)
         for issue in issues:
             component = issue['component'].split(':', 1)[1]
             issue_group_key = f"{issue['rule']}:{component}"
-            if issue_group_key not in grouped_issues:
-                grouped_issues[issue_group_key] = []
-            grouped_issues[issue_group_key].append(issue)
+            if issue_group_key not in processed_issues or processed_issues[issue_group_key] == 'unprocessed':
+                if issue_group_key not in grouped_issues:
+                    grouped_issues[issue_group_key] = []
+                grouped_issues[issue_group_key].append(issue)
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
         log_path = os.path.join(script_dir, '../ResultLogs/issue_resolutions.log')
-        processed_issues_file = os.path.join(script_dir, '../ResultLogs/processed_issues.json')
-        processed_issues = load_processed_issues(processed_issues_file)
-
+        
         for group_key, issues_in_group in grouped_issues.items():
-            attempt_count = 0
-
-            while attempt_count < MAX_RETRY_ATTEMPTS:
-                attempt_count += 1
-                print_blue(f"Attempt {attempt_count} for fixing issues in group {group_key}...")
-
-                first_issue = issues_in_group[0]
-                rule_details = fetch_rule_details(first_issue['rule'])
-                original_java_class = get_file_content(first_issue['component'])
-                prompt_text = setup_prompt(group_key, first_issue, rule_details)
-                qa_response = qa.invoke(prompt_text)
-                response_text = qa_response.get('answer', '') if isinstance(qa_response, dict) else ''
-                
-                print_blue("DEBUG: Response from QA model:")
-                print_blue(response_text)
-
-                updated_java_class = extract_updated_java_class(response_text)
-                feedback_prompt = setup_evaluation_prompt(original_java_class, updated_java_class, first_issue['message'])
-                feedback_response = evaluate_llm_response(feedback_prompt)
-                is_correctly_updated = extract_correctly_updated(feedback_response)
-
-                if is_correctly_updated:
-                    print_green(f"The updated class for {group_key} has been correctly updated.")
-                    for issue in issues_in_group:
-                        apply_fix_and_log(issue, updated_java_class, cloned_repo_path, log_path)
-                    save_processed_issue(processed_issues_file, group_key)
-                    break
-                else:
-                    print_red(f"Attempt {attempt_count} for {group_key} was unsuccessful.")
-                    if attempt_count == MAX_RETRY_ATTEMPTS:
-                        print_red(f"All attempts for {group_key} have been exhausted. Moving on to the next group.")
-
-            processed_issues[group_key] = True
+            first_issue = issues_in_group[0]
+            rule_details = fetch_rule_details(first_issue['rule'])
+            original_java_class = get_file_content(first_issue['component'])
+            prompt_text = setup_prompt(group_key, first_issue, rule_details)
+            qa_response = qa.invoke(prompt_text)
+            response_text = qa_response.get('answer', '') if isinstance(qa_response, dict) else ''
             
-        with open(processed_issues_file, 'w') as file:
-            json.dump(processed_issues, file)
+            print_blue("DEBUG: Response from QA model:")
+            print_blue(response_text)
 
+            updated_java_class = extract_updated_java_class(response_text)
+            feedback_prompt = setup_evaluation_prompt(original_java_class, updated_java_class, first_issue['message'])
+            feedback_response = evaluate_llm_response(feedback_prompt)
+            is_correctly_updated = extract_correctly_updated(feedback_response)
+
+            if is_correctly_updated:
+                print_green(f"The updated class for {group_key} has been correctly updated.")
+                for issue in issues_in_group:
+                    apply_fix_and_log(issue, updated_java_class, cloned_repo_path, log_path)
+                save_processed_issue(processed_issues_file, group_key, 'processed')
+            else:
+                print_red(f"Attempt for {group_key} was unsuccessful.")
+                save_processed_issue(processed_issues_file, group_key, 'unprocessed')
+            
         if build_result:
             print_green(f"Generation {generation} completed successfully.")
         else:

@@ -7,8 +7,8 @@ def load_processed_issues(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
 
-def save_processed_issue(file_path, issue_key):
+def save_processed_issue(file_path, issue_key, status):
     processed_issues = load_processed_issues(file_path)
-    processed_issues[issue_key] = True
+    processed_issues[issue_key] = status
     with open(file_path, 'w') as file:
         json.dump(processed_issues, file, indent=4)
