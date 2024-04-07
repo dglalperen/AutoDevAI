@@ -70,10 +70,8 @@ def main():
 
     print_green("Repository operation successful.")
 
-    # qa = setup_qa_retriever(cloned_repo_path, model="gpt-4-0125-preview")
     openai_conversation_handler = OpenAIConversationHandler(api_key=OPENAI_API_KEY)
 
-    # Define processed_issues_file here before its first use
     script_dir = os.path.dirname(os.path.abspath(__file__))
     processed_issues_file = os.path.join(
         script_dir, "../ResultLogs/processed_issues.json"
@@ -94,9 +92,8 @@ def main():
         run_sonarqube_scan_docker(
             cloned_repo_path, SONARCLOUD_TOKEN, ORGANIZATION, project_name
         )
-        project_key = f"{project_name}"
-        print_blue(f"Automatically selected SonarQube project: {project_name}")
-        issues = get_filtered_issues(project_key)
+
+        issues = get_filtered_issues(os.path.basename(cloned_repo_path))
 
         if not issues:
             print_yellow(f"No issues found for project: {project_name}.")
@@ -122,22 +119,11 @@ def main():
             rule_details = fetch_rule_details(first_issue["rule"])
             original_java_class = get_file_content(first_issue["component"])
             prompt_text = setup_prompt(group_key, first_issue, rule_details)
-            qa_response = openai_conversation_handler.ask_question(prompt_text)
-            response_text = (
-                qa_response.get("answer", "") if isinstance(qa_response, dict) else ""
-            )
-
-            print_blue("DEBUG: Response from QA model:")
-            print_blue(response_text)
+            response_text = openai_conversation_handler.ask_question(prompt_text)
 
             updated_java_class = extract_updated_java_class(response_text)
-            feedback_prompt = setup_evaluation_prompt(
-                original_java_class, updated_java_class, first_issue["message"]
-            )
-            feedback_response = evaluate_llm_response(feedback_prompt)
-            is_correctly_updated = extract_correctly_updated(feedback_response)
 
-            if is_correctly_updated:
+            if updated_java_class:
                 print_green(
                     f"The updated class for {group_key} has been correctly updated."
                 )

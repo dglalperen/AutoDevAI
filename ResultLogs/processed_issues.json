@@ -1,0 +1,12 @@
+{
+    "java:S1192:src/main/java/com/pairlearning/expensetracker/resources/CategoryResource.java": "processed",
+    "java:S1192:src/main/java/com/pairlearning/expensetracker/resources/TransactionResource.java": "processed",
+    "java:S1192:src/main/java/com/pairlearning/expensetracker/resources/UserResource.java": "processed",
+    "java:S1192:src/main/java/de/hsruhrwest/malteweiss/exercisegenerator/exercises/logic/booltabletonf/AbstractBoolTableToNFBase.java": "processed",
+    "java:S3776:src/main/java/de/hsruhrwest/malteweiss/exercisegenerator/exercises/logic/booltabletonf/AbstractBoolTableToNFBase.java": "processed",
+    "java:S1192:src/main/java/de/hsruhrwest/malteweiss/exercisegenerator/exercises/logic/kvdiagram/AbstractKVDiagramExercise.java": "processed",
+    "java:S3776:src/main/java/de/hsruhrwest/malteweiss/exercisegenerator/exercises/logic/kvdiagram/AbstractKVDiagramExercise.java": "processed",
+    "java:S3776:src/main/java/de/hsruhrwest/malteweiss/exercisegenerator/exercises/logic/kvdiagram/drawing/KVDiagramSvgDrawing.java": "processed",
+    "java:S1192:src/main/java/de/hsruhrwest/malteweiss/exercisegenerator/exercises/numberconversion/BinOctHexIntegerToDecimal.java": "processed",
+    "java:S3776:src/main/java/de/hsruhrwest/malteweiss/exercisegenerator/exercises/numberconversion/BinOctHexIntegerToDecimal.java": "processed"
+}

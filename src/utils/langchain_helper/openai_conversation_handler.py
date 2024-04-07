@@ -2,6 +2,8 @@ import os
 import dotenv
 from openai import OpenAI
 
+from utils.print_utils.colored_print import print_blue
+
 
 class OpenAIConversationHandler:
     def __init__(self, api_key, model="gpt-4-1106-preview"):
@@ -11,13 +13,17 @@ class OpenAIConversationHandler:
             {
                 "role": "system",
                 "content": """
-                You are an expert Java developer correcting SonarQube issues. Your responses should be in the following JSON format:
-                ```json
-                {
-                    "updated_java_class": "The updated Java class code."
-                }
-                ```
-                Please provide detailed fixes for code issues as described, and return the whole Java class including imports, without any shortenings.
+                As an expert Java developer tasked with correcting SonarQube issues, your role is to analyze Java classes and apply necessary fixes directly. When responding, ensure you:
+
+                - Return the complete Java class code, including all imports and package declarations.
+                - Address the specified issue comprehensively, ensuring the fix maintains the class's functionality and adheres to Java best practices.
+                - Follow this JSON response format precisely to encapsulate the updated Java class code:
+                  ```json
+                  {
+                      "updated_java_class": "Complete Java class code here."
+                  }
+                  ```
+                It's crucial to include the entire corrected class code in your response, without indicating parts of the code as 'unchanged' or using placeholders. Aim for detailed, precise fixes that fully resolve the issue while keeping the class fully operational.
                 """,
             }
         ]
@@ -37,20 +43,24 @@ class OpenAIConversationHandler:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=self.conversation_history,
-            n=1,
-            temperature=0.4,
+            temperature=0.2,
+            max_tokens=4096,
             response_format={"type": "json_object"},
         )
 
         # Assuming the API response is structured with the response in the expected format
         try:
             # Extract the response and append it to the conversation history
-            model_response = response.choices[0].message
+            model_response = response.choices[0].message.content
             self.conversation_history.append(
                 {"role": "assistant", "content": model_response}
             )
 
             print("Successfully retrieved the response.")
+            print(40 * "=")
+            print_blue(f"Model response: {model_response}")
+            print(40 * "=")
+
             return model_response
         except Exception as e:
             print(f"Error processing the API response: {e}")
