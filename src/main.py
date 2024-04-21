@@ -21,15 +21,12 @@ from utils.langchain_helper.processed_issues_operations import (
     load_processed_issues,
     save_processed_issue,
 )
-from utils.langchain_helper.setup_evaluation_llm import evaluate_llm_response
-from utils.langchain_helper.setup_qa_retriever import setup_qa_retriever
 from utils.maven_sonar.docker_sonar_scan import (
     create_sonar_project_file_if_not_exists,
     run_sonarqube_scan_docker,
 )
 from utils.maven_sonar.sonar_backend_helper import get_filtered_issues
 from utils.maven_sonar.docker_maven_builder import run_maven_build_docker
-from utils.prompts.evaluate_prompt import setup_evaluation_prompt
 from utils.prompts.prepare_prompt import (
     fetch_rule_details,
     get_file_content,
