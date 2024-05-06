@@ -2,7 +2,7 @@ import os
 import dotenv
 from openai import OpenAI
 
-from utils.print_utils.colored_print import print_blue
+from utils.print_utils.colored_print import print_blue, print_yellow
 
 
 class OpenAIConversationHandler:
@@ -39,10 +39,14 @@ class OpenAIConversationHandler:
                 """,
         }
 
+        print_yellow(40 * "=")
+        print(f"User question: {question}")
+        print_yellow(40 * "=")
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[system_message, {"role": "user", "content": question}],
-            temperature=0.2,
+            temperature=0.5,
             response_format={"type": "json_object"},
         )
 

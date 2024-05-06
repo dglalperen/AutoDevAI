@@ -110,7 +110,7 @@ def setup_prompt(issue_group_key, example_issue, rule_details):
         "updated_java_class": "public class {java_class_name} {{\\n    private static final String ISSUE = \\"example\\";\\n    public void exampleMethod() {{\\n        System.out.println(ISSUE);\\n    }}\\n}}"
     }}
     ```
-
+    It is extremely important that your response includes the entire corrected Java class code, without any missing parts or placeholders.
     Ensure the entire class is corrected comprehensively and is immediately usable without further modifications.
     """
 

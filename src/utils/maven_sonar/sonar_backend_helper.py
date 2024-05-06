@@ -62,16 +62,64 @@ def filter_issues(issues):
     return [issue for issue in issues if issue.get("rule") in sonar_rules]
 
 
-def get_filtered_issues(project_key):
+def get_issues_by_complexity(issues, complexity="low"):
+    complexity_map = {
+        "low": ["java:S1192", "java:S106", "java:S2447", "java:S2259", "java:S3655"],
+        "high": ["java:S3776", "java:S1541", "java:S138"],
+    }
+    return [
+        issue for issue in issues if issue.get("rule") in complexity_map[complexity]
+    ]
+
+
+def get_filtered_issues(project_key, complexity="low"):
     """
-    Get filtered issues for a given project key.
+    Get filtered issues for a given project key based on complexity.
     """
     issues = get_issues(project_key)
     if issues:
-        return filter_issues(issues)
+        return get_issues_by_complexity(issues, complexity)
     else:
         print(f"No issues found for {project_key}.")
-        return None
+        return []
+
+
+def get_issues_by_complexity(issues, complexity="low"):
+    complexity_map = {
+        "low": [
+            "java:S1192",
+            "java:S106",
+            "java:S2447",
+            "java:S2259",
+            "java:S3655",
+            "java:S1143",
+            "java:S2142",
+            "java:S1774",
+            "java:S2057",
+            "java:S2390",
+            "java:S2095",
+            "java:S4925",
+            "java:S2699",
+            "java:S3516",
+            "java:S3973",
+            "java:S2692",
+            "java:S2638",
+            "java:S131",
+            "javabugs:S6466",
+        ],
+        "high": [
+            "java:S3776",
+            "java:S1541",
+            "java:S138",
+            "java:S1820",
+            "java:S1448",
+            "java:S107",
+            "java:S4970",
+        ],
+    }
+    return [
+        issue for issue in issues if issue.get("rule") in complexity_map[complexity]
+    ]
 
 
 def main():
