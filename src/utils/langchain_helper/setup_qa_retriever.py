@@ -20,7 +20,7 @@ class JsonResponseSchema(BaseModel):
     )
 
 
-def setup_qa_retriever(repo_path, model="gpt-4-0125-preview"):
+def setup_qa_retriever(repo_path, model="gpt-4o"):
     """
     Set up the QA retriever with documents from a given Java repository.
 

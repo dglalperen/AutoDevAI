@@ -50,13 +50,26 @@ def is_content_complete(java_class_content):
     return not any(placeholder in java_class_content for placeholder in placeholders)
 
 
+import os
+
+
 def get_java_class_content(issue, cloned_repo_path, force_original=False):
-    cache_dir = os.path.join(cloned_repo_path, ".cache")
+    # Assuming 'component' in issue dictionary contains the relative path to the Java file
+    component_path = issue["component"]
+    # Correcting the relative path logic to adapt to your project structure
+    if ":" in component_path:
+        # Handle paths with Maven-style group ID included
+        component_path = component_path.split(":")[1]
+
+    original_path = os.path.join(cloned_repo_path, component_path.replace("/", os.sep))
+
+    # Using an absolute path for cache directory under the cloned repository
+    cache_dir = os.path.abspath(os.path.join(cloned_repo_path, ".cache"))
     os.makedirs(cache_dir, exist_ok=True)
-    cache_path = os.path.join(
-        cache_dir, issue["component"].replace("/", "_").replace(".java", "_cached.java")
-    )
-    original_path = os.path.join(cloned_repo_path, issue["component"])
+
+    # Creating a safe cache file name by replacing potential problematic characters
+    cache_file_name = component_path.replace("/", "_").replace(".java", "_cached.java")
+    cache_path = os.path.join(cache_dir, cache_file_name)
 
     if force_original or not os.path.exists(cache_path):
         with open(original_path, "r") as file:
@@ -70,8 +83,14 @@ def get_java_class_content(issue, cloned_repo_path, force_original=False):
     if is_content_complete(content):
         return content
     else:
-        with open(original_path, "r") as file:
-            return file.read()
+        # Ensure that the original file exists
+        if os.path.exists(original_path):
+            with open(original_path, "r") as file:
+                return file.read()
+        else:
+            raise FileNotFoundError(
+                f"Cannot find the original Java file at: {original_path}"
+            )
 
 
 def evaluate_and_fix_issue(
@@ -81,6 +100,7 @@ def evaluate_and_fix_issue(
     openai_conversation_handler,
     log_path,
     max_retries=2,
+    interactive=False,
 ):
     original_java_class = get_java_class_content(
         issue, cloned_repo_path, force_original=True
@@ -95,8 +115,6 @@ def evaluate_and_fix_issue(
         evaluation_prompt = setup_evaluation_prompt(
             original_java_class, updated_java_class, issue["message"]
         )
-
-        # Evaluate the updated class
         evaluation_response = openai_conversation_handler.ask_question(
             evaluation_prompt
         )
@@ -107,21 +125,17 @@ def evaluate_and_fix_issue(
                 f"Correct fix applied for {issue['rule']} on {issue['component']}."
             )
             apply_fix_and_log(issue, updated_java_class, cloned_repo_path, log_path)
-            break
+            return True
         else:
             print_red(f"Fix for {issue['rule']} on {issue['component']} was incorrect.")
             attempts += 1
-            if attempts > max_retries:
+            print_yellow("Retrying...")
+            if interactive and attempts > max_retries:
                 print_red(
                     f"Maximum retries reached for {issue['rule']} on {issue['component']}."
                 )
-                break
-
-            print_yellow("Retrying...")
-            # Force to use original file on retries
-            original_java_class = get_java_class_content(
-                issue, cloned_repo_path, force_original=True
-            )
+                return False
+    return True
 
 
 def handle_issues(
@@ -134,20 +148,30 @@ def handle_issues(
         "../ResultLogs/issue_resolutions.log",
     )
 
-    for index, issue in enumerate(issues, 1):
-        print_blue(f"Processing issue {index} of {total_issues}: Rule {issue['rule']}")
-        if generation == 2:
+    if generation == 1:
+        for index, issue in enumerate(issues, 1):
+            print_blue(
+                f"Processing issue {index} of {total_issues}: Rule {issue['rule']}"
+            )
             evaluate_and_fix_issue(
-                issue, project_name, cloned_repo_path, openai_conversation_handler
+                issue,
+                project_name,
+                cloned_repo_path,
+                openai_conversation_handler,
+                log_path,
             )
-        else:
-            original_java_class = get_file_content(issue["component"])
-            prompt_text = setup_prompt(
-                issue["rule"], issue, fetch_rule_details(issue["rule"])
-            )
-            response_text = openai_conversation_handler.ask_question(prompt_text)
-            updated_java_class = extract_updated_java_class(response_text)
-            apply_fix_and_log(issue, updated_java_class, cloned_repo_path, log_path)
+    else:
+        for issue in issues:
+            print_blue(f"Processing issue for Rule {issue['rule']}")
+            if not evaluate_and_fix_issue(
+                issue,
+                project_name,
+                cloned_repo_path,
+                openai_conversation_handler,
+                log_path,
+                interactive=True,
+            ):
+                break
 
 
 # Load API keys and tokens from environment
@@ -167,16 +191,19 @@ def main():
         fork_and_clone = ask_to_fork_and_clone()
         if fork_and_clone:
             print_blue(f"Forking and cloning {repo_choice}...")
-            cloned_repo_path = fork_and_clone_repository(repo_choice, GITHUB_API_KEY)
+            cloned_repo_path = fork_and_clone_repository(repo_choice)
         else:
             print_blue(f"Cloning {repo_choice} without forking...")
-            cloned_repo_path = clone_repo(repo_choice, GITHUB_API_KEY)
+            cloned_repo_path = clone_repo(repo_choice)
     else:
         cloned_repo_path = repo_choice
         print_blue(f"Using local repository at {cloned_repo_path}")
 
     print_green("Repository operation successful.")
-    openai_conversation_handler = OpenAIConversationHandler(api_key=OPENAI_API_KEY)
+    gpt4o = "gpt-4o"
+    openai_conversation_handler = OpenAIConversationHandler(
+        api_key=OPENAI_API_KEY, model=gpt4o
+    )
     script_dir = os.path.dirname(os.path.abspath(__file__))
     processed_issues_file = os.path.join(
         script_dir, "../ResultLogs/processed_issues.json"

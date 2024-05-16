@@ -22,7 +22,7 @@ def generate_fix_for_issue(java_class_content, issue_description):
     """
 
     response = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4o",
         messages=[
             {
                 "role": "system",

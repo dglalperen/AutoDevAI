@@ -13,6 +13,7 @@ sonar_rules = [
     "java:S1774",
     "java:S2057",
     "java:S106",
+    "java:S1068",
     "java:S2390",
     "java:S2095",
     "java:S4925",
@@ -48,7 +49,7 @@ def get_issues(project_key):
     """
     Get issues for a given project key.
     """
-    response = requests.get(f"http://localhost:3000/issues?projects={project_key}")
+    response = requests.get(f"http://localhost:4000/issues?projects={project_key}")
     if response.status_code == 200:
         return response.json().get("issues", [])
     else:
@@ -77,6 +78,9 @@ def get_filtered_issues(project_key, complexity="low"):
     Get filtered issues for a given project key based on complexity.
     """
     issues = get_issues(project_key)
+    print(f"Total Issues for {project_key}: {len(issues)}")
+    for issue in issues:
+        print(issue)
     if issues:
         return get_issues_by_complexity(issues, complexity)
     else:
@@ -106,6 +110,7 @@ def get_issues_by_complexity(issues, complexity="low"):
             "java:S2638",
             "java:S131",
             "javabugs:S6466",
+            "java:S1068",
         ],
         "high": [
             "java:S3776",

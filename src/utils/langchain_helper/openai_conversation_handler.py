@@ -6,7 +6,7 @@ from utils.print_utils.colored_print import print_blue, print_yellow
 
 
 class OpenAIConversationHandler:
-    def __init__(self, api_key, model="gpt-4-1106-preview"):
+    def __init__(self, api_key, model="gpt-4o"):
         self.client = OpenAI(api_key=api_key)
         self.model = model
 

@@ -76,45 +76,28 @@ def extract_java_class_name(path):
     return class_name
 
 
-def setup_prompt(issue_group_key, example_issue, rule_details):
-    java_class_name = extract_java_class_name(example_issue["component"])
-    original_java_class = get_file_content(example_issue["component"])
-    issue_description = example_issue["message"]
+def setup_prompt(issue_key, issue, rule_details):
+    java_class_name = extract_java_class_name(issue["component"])
+    original_java_class = get_file_content(issue["component"])
+    issue_description = issue["message"]
 
     prompt = f"""
-    You are tasked with refactoring a Java class that has been flagged by SonarQube for violating certain coding principles. Below is the Java class along with the specific issue identified by SonarQube. 
+    Refactor the Java class {java_class_name} as it violates the SonarQube rule due to the issue: {issue_description}. 
+    Ensure your fix addresses the issue comprehensively and maintain all functionality.
 
-    Your job is to correct this issue directly in the code provided. The corrected Java class should be fully functional and adhere to best coding practices, specifically addressing the SonarQube issue described below.
-
-    --- Java Class Name: {java_class_name} ---
-    --- SonarQube Issue Description: {issue_description} ---
-
+    Original Java Class:
     {original_java_class}
 
-    Instructions:
-    1. Return the entire Java class code after making the necessary modifications.
-    2. Do not use placeholders like 'rest of the class code remains unchanged'.
-    3. Ensure all parts of the class are included in your response, even if they do not require modifications.
-    4. Format your response as a JSON object with the key "updated_java_class". See below:
-
-    Return Format:
+    Please correct the issue directly in the code provided below and return the complete Java class code in the following JSON format:
     ```json
     {{
-        "updated_java_class": "/* Complete updated Java class code here */"
+        "updated_java_class": "Complete updated Java class code here"
     }}
     ```
 
-    Example of Expected Return JSON:
-    ```json
-    {{
-        "updated_java_class": "public class {java_class_name} {{\\n    private static final String ISSUE = \\"example\\";\\n    public void exampleMethod() {{\\n        System.out.println(ISSUE);\\n    }}\\n}}"
-    }}
-    ```
-    It is extremely important that your response includes the entire corrected Java class code, without any missing parts or placeholders.
-    Ensure the entire class is corrected comprehensively and is immediately usable without further modifications.
+    Your response must include the entire corrected Java class without placeholders indicating 'unchanged parts'. Make sure every part of the class is included, even those that don't need modification.
     """
-
-    return prompt
+    return prompt.strip()
 
 
 def extract_relevant_parts(md_description):
