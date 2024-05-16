@@ -1,6 +1,7 @@
 import json
 import re
 
+
 def extract_correctly_updated(response: str) -> bool:
     """
     Extracts the boolean value for "correctly_updated_class" from the given response.
@@ -13,13 +14,13 @@ def extract_correctly_updated(response: str) -> bool:
 
         try:
             parsed_json = json.loads(response)
-            correctly_updated = parsed_json.get('correctly_updated_class')
+            correctly_updated = parsed_json.get("correctly_updated_class")
         except json.JSONDecodeError:
-            json_match = re.search(r'\{.*?\}', response, re.DOTALL)
+            json_match = re.search(r"\{.*?\}", response, re.DOTALL)
             if json_match:
                 json_string = json_match.group(0).strip()
                 parsed_json = json.loads(json_string)
-                correctly_updated = parsed_json.get('correctly_updated_class')
+                correctly_updated = parsed_json.get("correctly_updated_class")
             else:
                 return None
 
@@ -34,6 +35,7 @@ def extract_correctly_updated(response: str) -> bool:
 
     return None
 
+
 def test_extract_correctly_updated():
     # Test cases
     cases = [
@@ -42,47 +44,41 @@ def test_extract_correctly_updated():
         ('Some text before {"correctly_updated_class": true} some text after', True),
         ('Incorrect key {"another_key": true}', None),
         ('No boolean value {"correctly_updated_class": "true"}', None),
-        ('Invalid JSON {correctly_updated_class: true}', None),
+        ("Invalid JSON {correctly_updated_class: true}", None),
     ]
-    
+
     # Testing loop
     for input_str, expected in cases:
         result = extract_correctly_updated(input_str)
-        assert result == expected, f"Failed on '{input_str}': expected {expected}, got {result}"
-    
+        assert (
+            result == expected
+        ), f"Failed on '{input_str}': expected {expected}, got {result}"
+
     print("All tests passed!")
 
-def extract_updated_java_class(response):
+
+def extract_updated_java_class(model_response):
     """
-    Extracts the updated Java class from the OpenAI model's JSON output.
+    Extracts the updated Java class code from the model's response.
 
     Parameters:
-    - response (str): The raw string output from the OpenAI model.
+    - model_response (str): The JSON string response from the model.
 
     Returns:
-    - str: The extracted Java class code, or an empty string if not found.
+    - str: The extracted Java class code, or an empty string if extraction fails.
     """
     try:
-        # Find the JSON snippet within the response using a regular expression
-        json_match = re.search(r'```json\s*({.*?})\s*```', response, re.DOTALL)
-        if json_match:
-            json_string = json_match.group(1)
-            
-            # Parse the JSON string into a Python dictionary
-            parsed_json = json.loads(json_string)
+        # Attempt to directly parse the JSON response
+        response_data = json.loads(model_response)
+        # Access the 'updated_java_class' directly from the parsed JSON
+        updated_java_class = response_data.get("updated_java_class", "")
 
-            # Extract the Java class code without relying on a specific key
-            # Assuming there's only one piece of Java class code in the JSON
-            for value in parsed_json.values():
-                if isinstance(value, str) and value.strip().startswith("package "):
-                    # Assuming the class code starts with "package"
-                    return value.encode().decode('unicode_escape')
-
+        # Ensure we're returning a string, even if the value was not found
+        return updated_java_class if isinstance(updated_java_class, str) else ""
     except json.JSONDecodeError as e:
-        print(f"Error decoding JSON: {e}")
+        print(f"Error decoding JSON from model response: {e}")
+        return ""
 
-    # If no updated Java class is found or an error occurs, return an empty string
-    return ''
 
 if __name__ == "__main__":
     test_extract_correctly_updated()
@@ -90,10 +86,12 @@ if __name__ == "__main__":
     simulated_response = """```json
     {"updated_java_class": "public class HelloWorld {\\\\n    public static void main(String[] args) {\\\\n        System.out.println(\\\\\\"Hello, World!\\\\\\");\\\\n    }\\\\n}"}
     ```"""
-    
+
     expected_class = 'public class HelloWorld {\\n    public static void main(String[] args) {\\n        System.out.println("Hello, World!");\\n    }\\n}'
 
     extracted_class = extract_updated_java_class(simulated_response)
-    
-    assert extracted_class == expected_class, f"extract_updated_java_class failed: expected {expected_class}, got {extracted_class}"
+
+    assert (
+        extracted_class == expected_class
+    ), f"extract_updated_java_class failed: expected {expected_class}, got {extracted_class}"
     print("extract_updated_java_class test passed!")

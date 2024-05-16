@@ -1,17 +1,21 @@
 import os
 from pathlib import Path
 from utils.console_helper.github_helper import is_valid_github_url
-from utils.print_utils.colored_print import print_blue,print_green,print_red
+from utils.print_utils.colored_print import print_blue, print_green, print_red
+
 
 def introduce_program():
     print_green("\nWelcome to AutoDevAI!")
-    print_green("This program autonomously improves and evolves Java software repositories.")
+    print_green(
+        "This program autonomously improves and evolves Java software repositories."
+    )
     print_green("Let's get started.\n")
+
 
 def ask_select_or_enter_repository():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.join(script_dir, '..', '..', '..')
-    repos_path = os.path.join(project_root, 'Repos')
+    project_root = os.path.join(script_dir, "..", "..", "..")
+    repos_path = os.path.join(project_root, "Repos")
 
     available_repos = list_repositories_in_folder(repos_path)
 
@@ -20,7 +24,9 @@ def ask_select_or_enter_repository():
         for idx, repo in enumerate(available_repos):
             print(f"{idx}. {repo}")
 
-        choice = input("\nEnter the index of the repository to use, or enter a new GitHub URL: ").strip()
+        choice = input(
+            "\nEnter the index of the repository to use, or enter a new GitHub URL: "
+        ).strip()
 
         if choice.isdigit() and int(choice) in range(len(available_repos)):
             selected_repo = available_repos[int(choice)]
@@ -31,12 +37,16 @@ def ask_select_or_enter_repository():
             print_red("Invalid input. Please enter a valid index or GitHub URL.\n")
             return ask_select_or_enter_repository()
     else:
-        return input("\nEnter the GitHub URL of the Java repository you'd like to auto-develop: ").strip()
+        return input(
+            "\nEnter the GitHub URL of the Java repository you'd like to auto-develop: "
+        ).strip()
 
 
 def ask_to_fork_and_clone():
     while True:
-        choice = input("Would you like to (1) fork and clone this repository or (2) just clone it locally? Enter 1 or 2: ").strip()
+        choice = input(
+            "Would you like to (1) fork and clone this repository or (2) just clone it locally? Enter 1 or 2: "
+        ).strip()
         if choice == "1":
             return True
         elif choice == "2":
@@ -58,7 +68,23 @@ def ask_number_of_generations():
                 print_blue("Please enter a positive integer.")
         except ValueError:
             print_red("Invalid input. Please enter an integer.")
-            
+
+
 def list_repositories_in_folder(folder_path):
     """List directories in the given folder path."""
-    return [d for d in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, d))]
+    return [
+        d
+        for d in os.listdir(folder_path)
+        if os.path.isdir(os.path.join(folder_path, d))
+    ]
+
+
+def print_summary(processed_issues, total_issues):
+    fixed_count = sum(
+        1 for status in processed_issues.values() if status == "processed"
+    )
+    unprocessed_count = total_issues - fixed_count
+    print_blue(f"Summary of actions:")
+    print_green(f"Total issues processed: {total_issues}")
+    print_green(f"Issues fixed: {fixed_count}")
+    # print_red(f"Issues remaining: {unprocessed_count}")
