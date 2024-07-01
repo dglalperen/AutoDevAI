@@ -39,9 +39,9 @@ class OpenAIConversationHandler:
                 """,
         }
 
-        print_yellow(40 * "=")
-        print(f"User question: {question}")
-        print_yellow(40 * "=")
+        # print_yellow(40 * "=")
+        # print(f"User question: {question}")
+        # print_yellow(40 * "=")
 
         response = self.client.chat.completions.create(
             model=self.model,
@@ -53,9 +53,9 @@ class OpenAIConversationHandler:
         try:
             # Extract the response and append it to the conversation history
             model_response = response.choices[0].message.content
-            print(40 * "=")
-            print_blue(f"Model response: {model_response}")
-            print(40 * "=")
+            # print(40 * "=")
+            # print_blue(f"Model response: {model_response}")
+            # print(40 * "=")
 
             return model_response
         except Exception as e:

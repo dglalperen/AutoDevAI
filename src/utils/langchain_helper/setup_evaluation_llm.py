@@ -24,11 +24,11 @@ def evaluate_llm_response(prompt: str, model: str = "gpt-4o"):
         ],
         response_format={"type": "json_object"},
     )
-    print("EVALUATION RESPONSE")
-    print(60 * "-")
+    # print("EVALUATION RESPONSE")
+    # print(60 * "-")
     response_text = response.choices[0].message.content if response.choices else None
-    print(response_text)
-    print(60 * "-")
+    # print(response_text)
+    # print(60 * "-")
 
     return response_text
 

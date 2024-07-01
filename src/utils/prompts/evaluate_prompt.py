@@ -127,4 +127,4 @@ if __name__ == "__main__":
     evaluation_prompt = setup_evaluation_prompt(
         original_java_class, updated_java_class, task_description
     )
-    print(evaluation_prompt)
+    # print(evaluation_prompt)

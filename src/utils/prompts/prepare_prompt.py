@@ -10,7 +10,7 @@ def print_yellow(text):
 
 def fetch_rule_details(rule_key):
     try:
-        response = requests.get(f"http://localhost:3000/rules?key={rule_key}")
+        response = requests.get(f"http://localhost:4000/rules?key={rule_key}")
         if response.status_code == 200:
             return response.json()
         else:
@@ -82,20 +82,24 @@ def setup_prompt(issue_key, issue, rule_details):
     issue_description = issue["message"]
 
     prompt = f"""
-    Refactor the Java class {java_class_name} as it violates the SonarQube rule due to the issue: {issue_description}. 
+    Refactor the Java class {java_class_name} as it violates the SonarQube rule due to the issue:
+    {issue_description}. 
     Ensure your fix addresses the issue comprehensively and maintain all functionality.
 
     Original Java Class:
     {original_java_class}
 
-    Please correct the issue directly in the code provided below and return the complete Java class code in the following JSON format:
+    Please correct the issue directly in the code provided below and
+    return the complete Java class code in the following JSON format:
     ```json
     {{
         "updated_java_class": "Complete updated Java class code here"
     }}
     ```
 
-    Your response must include the entire corrected Java class without placeholders indicating 'unchanged parts'. Make sure every part of the class is included, even those that don't need modification.
+    Your response must include the entire corrected Java class without placeholders indicating
+    'unchanged parts'. Make sure every part of the class is included,
+    even those that don't need modification.
     """
     return prompt.strip()
 
@@ -171,7 +175,7 @@ if __name__ == "__main__":
         rule_details,
     )
     # Print the prepared prompt
-    print(prompt)
+    # print(prompt)
 
     # For testing purposes, you might want to simulate an AI response here
     # Example AI response (modify as needed for your tests)

@@ -40,6 +40,13 @@ from utils.print_utils.colored_print import (
     print_yellow,
 )
 
+# Load API keys and tokens from environment
+GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SONARCLOUD_TOKEN = os.getenv("SONARCLOUD_TOKEN")
+DEBUG_GITHUB_URL = "https://github.com/dglalperen/Rental-Car-Agency.git"
+ORGANIZATION = "dglalperen"
+
 
 def is_content_complete(java_class_content):
     placeholders = [
@@ -50,24 +57,13 @@ def is_content_complete(java_class_content):
     return not any(placeholder in java_class_content for placeholder in placeholders)
 
 
-import os
-
-
 def get_java_class_content(issue, cloned_repo_path, force_original=False):
-    # Assuming 'component' in issue dictionary contains the relative path to the Java file
     component_path = issue["component"]
-    # Correcting the relative path logic to adapt to your project structure
     if ":" in component_path:
-        # Handle paths with Maven-style group ID included
         component_path = component_path.split(":")[1]
-
     original_path = os.path.join(cloned_repo_path, component_path.replace("/", os.sep))
-
-    # Using an absolute path for cache directory under the cloned repository
     cache_dir = os.path.abspath(os.path.join(cloned_repo_path, ".cache"))
     os.makedirs(cache_dir, exist_ok=True)
-
-    # Creating a safe cache file name by replacing potential problematic characters
     cache_file_name = component_path.replace("/", "_").replace(".java", "_cached.java")
     cache_path = os.path.join(cache_dir, cache_file_name)
 
@@ -83,7 +79,6 @@ def get_java_class_content(issue, cloned_repo_path, force_original=False):
     if is_content_complete(content):
         return content
     else:
-        # Ensure that the original file exists
         if os.path.exists(original_path):
             with open(original_path, "r") as file:
                 return file.read()
@@ -105,7 +100,7 @@ def handle_issues(
     print_blue(f"Handling {total_issues} issues in generation {generation}.")
     log_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        "../ResultLogs/issue_resolutions_blabla.log",
+        "../ResultLogs/issue_resolutions_high_complexity.log",
     )
 
     for index, issue in enumerate(issues, 1):
@@ -117,7 +112,7 @@ def handle_issues(
             openai_conversation_handler,
             log_path,
         ):
-            save_processed_issue(issue, processed_issues_file)
+            save_processed_issue(processed_issues_file, issue["key"], "processed")
         else:
             print_red(
                 f"Failed to process issue {issue['key']} with rule {issue['rule']}."
@@ -182,14 +177,6 @@ def evaluate_and_fix_issue(
     return correctly_updated
 
 
-# Load API keys and tokens from environment
-GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SONARCLOUD_TOKEN = os.getenv("SONARCLOUD_TOKEN")
-DEBUG_GITHUB_URL = "https://github.com/dglalperen/Rental-Car-Agency.git"
-ORGANIZATION = "dglalperen"
-
-
 def main():
     introduce_program()
     repo_choice = ask_select_or_enter_repository()
@@ -220,7 +207,23 @@ def main():
 
     generation = 1
     total_issues_processed = 0
-    complexities = ["low", "high"]
+
+    # Ask user to select complexity level(s)
+    print_blue("Select complexity level(s) to work on:")
+    print_blue("1. Low complexity")
+    print_blue("2. High complexity")
+    print_blue("3. Both")
+    choice = input("Enter your choice (1/2/3): ").strip()
+
+    if choice == "1":
+        complexities = ["low"]
+    elif choice == "2":
+        complexities = ["high"]
+    elif choice == "3":
+        complexities = ["low", "high"]
+    else:
+        print_red("Invalid choice. Exiting.")
+        return
 
     for complexity in complexities:
         while True:

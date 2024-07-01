@@ -1,15 +1,19 @@
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 
+
 def build_error_fix_prompt(error_message):
     # Define a response schema for the corrected Java code
-    response_schema = ResponseSchema(name="corrected_java_class", description="The corrected Java class code, encapsulated in a JSON object.")
-    
+    response_schema = ResponseSchema(
+        name="corrected_java_class",
+        description="The corrected Java class code, encapsulated in a JSON object.",
+    )
+
     # Instantiate an output parser using the defined response schema
     output_parser = StructuredOutputParser.from_response_schemas([response_schema])
-    
+
     # Retrieve format instructions from the output parser
     format_instructions = output_parser.get_format_instructions()
-    
+
     # Construct the prompt with detailed instructions and formatting requirements
     prompt = f"""
         System message: You are a Java programming expert. Correct the issue in the Java code that caused the build error and provide the corrected code.
@@ -32,6 +36,5 @@ def build_error_fix_prompt(error_message):
         
         YOUR RESPONSE:
     """.strip()
-    
-    print(f"DEBUG: Prompt: {prompt}")
+
     return prompt
