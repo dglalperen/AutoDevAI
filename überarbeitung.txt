@@ -1,0 +1,74 @@
+# Ausarbeitung im Vergleich zur Implementierung sehr oberflächlich. Ergebnisse schwer nachvollziehbar. Replikation kaum möglich.
+
+# 4.1 („Prompt Design“): Wie sehen die Prompts konkret aus?
+
+1 Prompt --> Verbeserung
+1 Prompt --> Evaluierung / Korrigierung des ersten Versuchs
+--> prompt zeigen !
+
+# 4.3 („AI-Powered Code Repair“): Wie wurde die Repair-Methode umgesetzt?
+
+Repair Vorgang konkret beschreiben / zeigen
+
+# Welche High Complexity Issues wurden denn gefixt und wie gut? (Beispiele!)
+
+# Welche Issues konnten nicht gefixed oder nur fehlerhaft korrigiert werden?
+
+konkret zeigen was gefixt wurde und was nicht geklappt hat
+
+# Analyse of Retries: Was bedeuten diese IDs im Text?
+
+Konkret Issue zeigen statt ID
+
+# Was sind denn die Lessons Learned? Welche Probleme treten auf? Welcher manuelle Aufwand ist noch erforderlich? Wie weit sind für von der Vollautomatisierung weg?
+
+Erklären in Evaluierung
+
+# Wie hoch sind die Kosten? Welche Laufzeiten hat das System denn?
+
+# Der Punkt “Laufzeit” kommt in der Diskussion etwas überraschend. Ist das wirklich so kritisch? Ich habe vorher keine Laufzeitmessungen gesehen...
+
+--> LAUFZEIT RAUS ODER UNGEFÄHR ERKLÄREN
+
+-> Kosten eventuell messen mit tokens und openai kostenrechnung
+-> Laufzeiten wurden nicht gemessen aber man könnte ungefähr sagen, wie lange ein Repository Durchlauf gedauert hat
+
+# Abschnitt „Outlook“ ist ein Allgemeinplatz. Es ist auch nicht zwangsläufig gesichert, dass die Erkennung in Zukunft besser/perfekt wird.
+
+# Form:
+
+Seitenzahlen fehlen
+Fig. 1: Was bedeutet die Farbkodierung? --> Unterscheidung zwischen Komplexität
+Tab. 1: Unnötige Einrückungen in der Tabelle --> Formatierung
+
+--> Anpassen
+
+# Einleitung: Forschungsfrage kaum erkennbar.
+
+--> Wie kann AI dazu beitragen, automatisiert die Softwarequalität von Repositories (in unserem Fall Java Repositories) zu verbessern. Das in Kombination mit Statischen Code Analyse Tools wie SonarQube
+
+# Abschnitt 3 ist kaum lesbar. Erscheint fast so als wären einfach aus den Spiegelstrichen Sätze gemacht worden.
+
+--> Vernünftiger, Zusammenpassender Fließtext !
+
+# Abschnitt 4 Verweise auf Code der nicht bekannt ist, helfen nicht...
+
+--> Code zeigen ? Besser beschreiben / Jansen fragen
+
+# 4.5 gehört in 5 (Evaluationsstrategie)
+
+--> Selbsterklärend
+
+# Auf die Rule Description wird mehr als eine halbe Seite verschwendet, was bei 5 Seiten echt viel ist. Mehrwert unklar.
+
+--> Tabelle raus und nur die Rule Descriptions zeigen, die hier auch bearbeitet wurden
+
+# „These issues were primarily under the rules java, with 115 issues, and java, with 20 issues.”, vollkommen unklar.
+
+--> besser erklären
+
+# “Main challenges encountered included incorrect bixes for high complexity issues, such as the failure of issue AY64tnN9AdDDtTOK0M4G after three attempts. Additionally, issue AY2HqQVtSQKTXioxPEEv encountered multiple JSON decoding errors, hindering resolution efforts.“, wie bitte???
+
+# Die Evaluation ist etwas nichtssagend, insbesondere in dem Bereich der komplexeren Probleme. Sind die 83% hier reproduzierbar auf anderen Repos?
+
+--> Nicht wirklich reproduzierbar, da die Issue die bearbeitet wurde, die Kognitive Code Komplexität verringern soll und dies immer unterschiedlich sein kann

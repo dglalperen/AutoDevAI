@@ -1,0 +1,16 @@
+https://gitlab.com/wyd-weiss/exercise-generator
+https://github.com/keepacom/api_backend
+https://github.com/WolfGangS/SpigotRestAPI
+https://github.com/GabrielBB/Vehicles-API
+https://github.com/cljung/java-rest-api
+https://github.com/mangila/spring-restful-mongodb
+https://github.com/scbushan05/expense-manager-api
+https://github.com/canchito-dev/rest-api-with-jpa-criteria
+https://github.com/sanketsw/SpringBoot_REST_API
+https://github.com/tiagoamp/rest-api-series
+https://github.com/rahmathulla/restChatApplication
+https://github.com/SaiUpadhyayula/expense-tracker-rest-api
+https://github.com/Skhwan/restaurant-manager
+https://github.com/callicoder/spring-boot-postgresql-jpa-hibernate-rest-api-demo
+https://github.com/merikbest/ecommerce-spring-reactjs
+

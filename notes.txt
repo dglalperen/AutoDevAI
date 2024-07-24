@@ -1,0 +1,53 @@
+Questions:
+- Should we use SonarCloud or SonarQube for static code analysis?
+- if we use SonarQube, we have to install it on a server, right? Is there a free version?
+
+Java static code analysis metrics:
+- Clean Code Attributes
+- Software Qualities
+- The severity of the software quality
+
+Project Lifecycle:
+
+1. SonarCloud Scan
+2. Retrieve the results from SonarCloud
+3. Filter the results based on the type of the issue
+4. Create a prompt for large language model to solve the issues
+5. Implement the solution from the prompt results
+6. Run the SonarCloud Scan again
+
+Helpful links:
+https://docs.sonarsource.com/sonarqube/latest/user-guide/quality-gates/
+https://docs.sonarcloud.io/improving/clean-as-you-code/
+
+Notes:
+- We can use quality gates to define a set of conditions which the project is measured install
+
+
+- we will have to provide more context about the rule itself (X)
+- we will have to test on more repositories (X)
+- we will have to maybe run the unit tests too if provided ( )
+
+
+
+Zwischenergebnisse:
+
+- Building mit maven funktioniert einwandfrei
+- Mehrere Repositories getestet
+
+
+Probleme:
+- Extraction of the concrete errors using regex not working properly
+--> Workaround: outputting the build output including the potential errors and passing it
+    to the buil_fixing_prompt
+    - To Do --> try to improve the regex to extract the errors
+    - Python maven
+
+- Exraction of code from response
+    - Case 1: sometimes the code is not in the response
+    - Case 2: sometimes the code is in the response but not in the correct format
+    --> Versucht durch verschiedene Abdeckungen zu lösen
+    --> GPT Functions
+--> Possible Solution: instead of trying to extract the code from the response
+    in a specific format, we can try to improve the prompt to just return the whole class
+    --> versucht aber nicht wirklich erfolgreich

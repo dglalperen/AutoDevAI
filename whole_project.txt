@@ -1,0 +1,1337 @@
+this is my main.py:
+import os
+import json
+from utils.console_helper.console_interaction import (
+    ask_select_or_enter_repository,
+    ask_to_fork_and_clone,
+    introduce_program,
+    print_summary,
+)
+from utils.console_helper.github_helper import (
+    clone_repo,
+    fork_and_clone_repository,
+    is_valid_github_url,
+)
+from utils.langchain_helper.apply_fix_and_log import apply_fix_and_log
+from utils.langchain_helper.extract_updated_java_class import (
+    extract_correctly_updated,
+    extract_updated_java_class,
+)
+from utils.langchain_helper.openai_conversation_handler import OpenAIConversationHandler
+from utils.langchain_helper.processed_issues_operations import (
+    load_processed_issues,
+    save_processed_issue,
+)
+from utils.maven_sonar.docker_sonar_scan import (
+    create_sonar_project_file_if_not_exists,
+    run_sonarqube_scan_docker,
+)
+from utils.maven_sonar.sonar_backend_helper import get_filtered_issues
+from utils.maven_sonar.docker_maven_builder import run_maven_build_docker
+from utils.prompts.evaluate_prompt import setup_evaluation_prompt
+from utils.prompts.prepare_prompt import (
+    fetch_rule_details,
+    get_file_content,
+    setup_prompt,
+)
+from utils.print_utils.colored_print import (
+    print_blue,
+    print_green,
+    print_red,
+    print_yellow,
+)
+
+# Load API keys and tokens from environment
+GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SONARCLOUD_TOKEN = os.getenv("SONARCLOUD_TOKEN")
+DEBUG_GITHUB_URL = "https://github.com/dglalperen/Rental-Car-Agency.git"
+ORGANIZATION = "dglalperen"
+
+
+def is_content_complete(java_class_content):
+    placeholders = [
+        "Rest of the class remains unchanged...",
+        "Rest of the methods remains unchanged...",
+        "remains unchanged",
+    ]
+    return not any(placeholder in java_class_content for placeholder in placeholders)
+
+
+def get_java_class_content(issue, cloned_repo_path, force_original=False):
+    component_path = issue["component"]
+    if ":" in component_path:
+        component_path = component_path.split(":")[1]
+    original_path = os.path.join(cloned_repo_path, component_path.replace("/", os.sep))
+    cache_dir = os.path.abspath(os.path.join(cloned_repo_path, ".cache"))
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file_name = component_path.replace("/", "_").replace(".java", "_cached.java")
+    cache_path = os.path.join(cache_dir, cache_file_name)
+
+    if force_original or not os.path.exists(cache_path):
+        with open(original_path, "r") as file:
+            content = file.read()
+        with open(cache_path, "w") as file:
+            file.write(content)
+    else:
+        with open(cache_path, "r") as file:
+            content = file.read()
+
+    if is_content_complete(content):
+        return content
+    else:
+        if os.path.exists(original_path):
+            with open(original_path, "r") as file:
+                return file.read()
+        else:
+            raise FileNotFoundError(
+                f"Cannot find the original Java file at: {original_path}"
+            )
+
+
+def handle_issues(
+    issues,
+    generation,
+    project_name,
+    cloned_repo_path,
+    openai_conversation_handler,
+    processed_issues_file,
+):
+    total_issues = len(issues)
+    print_blue(f"Handling {total_issues} issues in generation {generation}.")
+    log_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "../ResultLogs/issue_resolutions_high_complexity.log",
+    )
+
+    for index, issue in enumerate(issues, 1):
+        print_blue(f"Processing issue {index} of {total_issues}: Rule {issue['rule']}")
+        if evaluate_and_fix_issue(
+            issue,
+            project_name,
+            cloned_repo_path,
+            openai_conversation_handler,
+            log_path,
+        ):
+            save_processed_issue(processed_issues_file, issue["key"], "processed")
+        else:
+            print_red(
+                f"Failed to process issue {issue['key']} with rule {issue['rule']}."
+            )
+
+
+def evaluate_and_fix_issue(
+    issue,
+    project_name,
+    cloned_repo_path,
+    openai_conversation_handler,
+    log_path,
+    max_retries=2,
+    interactive=False,
+):
+    print_blue(f"Evaluating issue {issue['key']} with rule {issue['rule']}")
+    original_java_class = get_java_class_content(
+        issue, cloned_repo_path, force_original=True
+    )
+    rule_details = fetch_rule_details(issue["rule"])
+    attempts = 0
+    correctly_updated = False
+
+    while attempts <= max_retries:
+        print_blue(
+            f"Attempt {attempts + 1} for issue {issue['key']} with rule {issue['rule']}"
+        )
+        prompt_text = setup_prompt(issue["rule"], issue, rule_details)
+        response_text = openai_conversation_handler.ask_question(prompt_text)
+        updated_java_class = extract_updated_java_class(response_text)
+        evaluation_prompt = setup_evaluation_prompt(
+            original_java_class, updated_java_class, issue["message"]
+        )
+        evaluation_response = openai_conversation_handler.ask_question(
+            evaluation_prompt
+        )
+        correctly_updated = extract_correctly_updated(evaluation_response)
+
+        if correctly_updated:
+            print_green(
+                f"Correct fix applied for {issue['rule']} on {issue['component']}."
+            )
+            apply_fix_and_log(
+                issue,
+                original_java_class,
+                updated_java_class,
+                correctly_updated,
+                attempts,
+                cloned_repo_path,
+                log_path,
+            )
+            return True
+        else:
+            print_red(f"Fix for {issue['rule']} on {issue['component']} was incorrect.")
+            attempts += 1
+            print_yellow("Retrying...")
+            if interactive and attempts > max_retries:
+                print_red(
+                    f"Maximum retries reached for {issue['rule']} on {issue['component']}."
+                )
+                return False
+    return correctly_updated
+
+
+def main():
+    introduce_program()
+    repo_choice = ask_select_or_enter_repository()
+    cloned_repo_path = None
+
+    if is_valid_github_url(repo_choice):
+        fork_and_clone = ask_to_fork_and_clone()
+        if fork_and_clone:
+            print_blue(f"Forking and cloning {repo_choice}...")
+            cloned_repo_path = fork_and_clone_repository(repo_choice)
+        else:
+            print_blue(f"Cloning {repo_choice} without forking...")
+            cloned_repo_path = clone_repo(repo_choice)
+    else:
+        cloned_repo_path = repo_choice
+        print_blue(f"Using local repository at {cloned_repo_path}")
+
+    print_green("Repository operation successful.")
+    gpt4o = "gpt-4o"
+    openai_conversation_handler = OpenAIConversationHandler(
+        api_key=OPENAI_API_KEY, model=gpt4o
+    )
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    processed_issues_file = os.path.join(
+        script_dir, "../ResultLogs/processed_issues.json"
+    )
+    project_name = os.path.basename(cloned_repo_path)
+
+    generation = 1
+    total_issues_processed = 0
+
+    # Ask user to select complexity level(s)
+    print_blue("Select complexity level(s) to work on:")
+    print_blue("1. Low complexity")
+    print_blue("2. High complexity")
+    print_blue("3. Both")
+    choice = input("Enter your choice (1/2/3): ").strip()
+
+    if choice == "1":
+        complexities = ["low"]
+    elif choice == "2":
+        complexities = ["high"]
+    elif choice == "3":
+        complexities = ["low", "high"]
+    else:
+        print_red("Invalid choice. Exiting.")
+        return
+
+    for complexity in complexities:
+        while True:
+            print_blue(
+                f"\n--- Starting Generation {generation} (Complexity: {complexity}) ---"
+            )
+            build_result, error_message = run_maven_build_docker(cloned_repo_path)
+            if not build_result:
+                print_red("Failed to compile the project.")
+                print_red(f"Error: {error_message}")
+                return  # Exit if the build fails
+
+            print_green("Build successful.")
+            create_sonar_project_file_if_not_exists(cloned_repo_path, project_name)
+            print_blue("Initiating SonarQube scan...")
+            run_sonarqube_scan_docker(
+                cloned_repo_path, SONARCLOUD_TOKEN, ORGANIZATION, project_name
+            )
+            issues = get_filtered_issues(project_name, complexity)
+
+            if not issues:
+                print_yellow(
+                    f"No {complexity} complexity issues found for {project_name}."
+                )
+                break  # Move to the next complexity if no issues are found
+
+            handle_issues(
+                issues,
+                generation,
+                project_name,
+                cloned_repo_path,
+                openai_conversation_handler,
+                processed_issues_file,
+            )
+            processed_issues = load_processed_issues(processed_issues_file)
+            total_issues_processed += len(issues)
+
+            all_issues_resolved = all(
+                status == "processed" for status in processed_issues.values()
+            )
+
+            if all_issues_resolved:
+                print_green("All issues have been resolved. Ending the process.")
+                break
+
+            generation += 1
+
+    print_blue("Performing final SonarQube scan to verify the overall project state...")
+    run_sonarqube_scan_docker(
+        cloned_repo_path, SONARCLOUD_TOKEN, ORGANIZATION, project_name
+    )
+    print_green("Final SonarQube scan completed.")
+
+    print_summary(load_processed_issues(processed_issues_file), total_issues_processed)
+
+
+if __name__ == "__main__":
+    main()
+
+
+console_interaction.py:
+import os
+from pathlib import Path
+from utils.console_helper.github_helper import is_valid_github_url
+from utils.print_utils.colored_print import print_blue, print_green, print_red
+
+
+def introduce_program():
+    print_green("\nWelcome to AutoDevAI!")
+    print_green(
+        "This program autonomously improves and evolves Java software repositories."
+    )
+    print_green("Let's get started.\n")
+
+
+def ask_select_or_enter_repository():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(script_dir, "..", "..", "..")
+    repos_path = os.path.join(project_root, "Repos")
+
+    available_repos = list_repositories_in_folder(repos_path)
+
+    if available_repos:
+        print_blue("\nAvailable local repositories:")
+        for idx, repo in enumerate(available_repos):
+            print(f"{idx}. {repo}")
+
+        choice = input(
+            "\nEnter the index of the repository to use, or enter a new GitHub URL: "
+        ).strip()
+
+        if choice.isdigit() and int(choice) in range(len(available_repos)):
+            selected_repo = available_repos[int(choice)]
+            return os.path.join(repos_path, selected_repo)
+        elif is_valid_github_url(choice):
+            return choice
+        else:
+            print_red("Invalid input. Please enter a valid index or GitHub URL.\n")
+            return ask_select_or_enter_repository()
+    else:
+        return input(
+            "\nEnter the GitHub URL of the Java repository you'd like to auto-develop: "
+        ).strip()
+
+
+def ask_to_fork_and_clone():
+    while True:
+        choice = input(
+            "Would you like to (1) fork and clone this repository or (2) just clone it locally? Enter 1 or 2: "
+        ).strip()
+        if choice == "1":
+            return True
+        elif choice == "2":
+            return False
+        else:
+            print_red("Invalid input. Please enter 1 or 2.")
+
+
+def ask_number_of_generations():
+    """
+    Ask the user for the number of generations they want to run the program.
+    """
+    while True:
+        try:
+            generations = int(input("Enter the number of generations to run: ").strip())
+            if generations > 0:
+                return generations
+            else:
+                print_blue("Please enter a positive integer.")
+        except ValueError:
+            print_red("Invalid input. Please enter an integer.")
+
+
+def list_repositories_in_folder(folder_path):
+    """List directories in the given folder path."""
+    return [
+        d
+        for d in os.listdir(folder_path)
+        if os.path.isdir(os.path.join(folder_path, d))
+    ]
+
+
+def print_summary(processed_issues, total_issues):
+    fixed_count = sum(
+        1 for status in processed_issues.values() if status == "processed"
+    )
+    unprocessed_count = total_issues - fixed_count
+    print_blue(f"Summary of actions:")
+    print_green(f"Total issues processed: {total_issues}")
+    print_green(f"Issues fixed: {fixed_count}")
+    # print_red(f"Issues remaining: {unprocessed_count}")
+
+
+github_helper.py:
+from github import Github
+import os
+import dotenv
+from pathlib import Path
+import re
+import subprocess
+from utils.print_utils.colored_print import print_blue, print_green, print_red, print_yellow
+
+def clone_repo(repo_url):
+    # Get the name of the repository from the URL
+    repo_name = repo_url.split("/")[-1].split(".")[0]
+    
+    # Get the path to the current script's directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Navigate up two directories to the project root
+    project_root = os.path.join(script_dir, '..', '..', '..')
+    
+    # Create the path to the Repos folder within your project's root directory
+    repos_path = os.path.join(project_root, 'Repos')
+    
+    # Ensure the Repos folder exists
+    os.makedirs(repos_path, exist_ok=True)
+    
+    # Create the path to the repository folder
+    repo_path = os.path.join(repos_path, repo_name)
+    
+    # Clone the repository into the repository folder
+    subprocess.run(["git", "clone", repo_url, repo_path])
+
+    # Return the path where the repository is cloned
+    return repo_path
+
+def is_valid_github_url(url):
+    regex = r'https://github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-]+(\.git)?'
+    return re.match(regex, url) is not None
+
+def fork_and_clone_repository(repo_url):
+    dotenv.load_dotenv()
+    GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+    # Authenticate with GitHub
+    g = Github(GITHUB_API_KEY)
+    try:
+        repo_name = get_repo_name_from_url(repo_url)
+        user = g.get_user()
+        repo = g.get_repo(repo_name)
+        forked_repo = user.create_fork(repo)
+        clone_repo(forked_repo.clone_url)
+        return forked_repo.clone_url
+    except Exception as e:
+        print_red(f"Error occurred during forking and cloning: {e}")
+        return None
+    
+def get_repo_name_from_url(url):
+    return url.split('/')[-2] + '/' + url.split('/')[-1].replace('.git', '')
+
+def commit_changes(repo_path, message):
+    """
+    Commit changes to the local repository.
+
+    :param repo_path: Path to the local repository.
+    :param message: Commit message.
+    """
+    # Navigate to the repository directory
+    os.chdir(repo_path)
+    
+    # Configure Git to bypass the need for user identity in this script context
+    os.system("git config user.name 'dglalperen'")
+    os.system("git config user.email 'alperen.dagli43@gmail.com'")
+    
+    # Add all changes to staging
+    os.system("git add .")
+    
+    # Commit the changes
+    commit_status = os.system(f"git commit -m '{message}'")
+    
+    # Check if commit was successful
+    if commit_status == 0:
+        print_green("Changes committed successfully.")
+    else:
+        print_yellow("No changes to commit or commit failed.")
+
+
+apply_fix_and_log.py:
+import json
+import os
+import datetime
+from utils.print_utils.colored_print import print_blue
+
+
+def apply_fix_and_log(
+    issue,
+    original_code,
+    ai_generated_fix,
+    correctly_updated,
+    retries,
+    cloned_repo_path,
+    log_path,
+):
+    issue_details = f"Rule: {issue['rule']} - Message: {issue['message']} - Component: {issue['component']}"
+    print_blue(f"\nHandling Issue: {issue_details}\n")
+
+    if not ai_generated_fix.strip():
+        print(f"No valid fix provided for {issue['key']}. Skipping...")
+        return
+
+    file_path = os.path.join(cloned_repo_path, issue["component"].split(":")[1])
+    print(60 * "-")
+    print_blue(f"Expected file path: {file_path}")
+    print(60 * "-")
+
+    with open(file_path, "w") as file:
+        file.write(ai_generated_fix)
+
+    log_entry = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "issue_key": issue["key"],
+        "rule": issue["rule"],
+        "message": issue["message"],
+        "component": issue["component"],
+        "original_code": original_code,
+        "ai_generated_fix": ai_generated_fix,
+        "evaluation_result": correctly_updated,
+        "error_message": None,  # Placeholder for potential errors
+        "retries": retries,
+        "file_path": file_path,
+    }
+
+    with open(log_path, "a") as log_file:
+        json.dump(log_entry, log_file)
+        log_file.write("\n")
+
+    print(f"Applied fix for {issue['key']} and logged the resolution.")
+
+
+extract_updated_java_class.py:
+import json
+import re
+
+
+def extract_correctly_updated(response: str) -> bool:
+    """
+    Extracts the boolean value for "correctly_updated_class" from the given response.
+
+    :param response: The response string from the model, which should include a JSON object.
+    :return: A boolean value extracted from the response or None if not found or invalid.
+    """
+    try:
+        response = response.strip()
+
+        try:
+            parsed_json = json.loads(response)
+            correctly_updated = parsed_json.get("correctly_updated_class")
+        except json.JSONDecodeError:
+            json_match = re.search(r"\{.*?\}", response, re.DOTALL)
+            if json_match:
+                json_string = json_match.group(0).strip()
+                parsed_json = json.loads(json_string)
+                correctly_updated = parsed_json.get("correctly_updated_class")
+            else:
+                return None
+
+        if isinstance(correctly_updated, bool):
+            return correctly_updated
+        else:
+            print("Extracted value is not a boolean.")
+            return None
+
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+
+    return None
+
+
+def test_extract_correctly_updated():
+    # Test cases
+    cases = [
+        ('{"correctly_updated_class": true}', True),
+        ('{"correctly_updated_class": false}', False),
+        ('Some text before {"correctly_updated_class": true} some text after', True),
+        ('Incorrect key {"another_key": true}', None),
+        ('No boolean value {"correctly_updated_class": "true"}', None),
+        ("Invalid JSON {correctly_updated_class: true}", None),
+    ]
+
+    # Testing loop
+    for input_str, expected in cases:
+        result = extract_correctly_updated(input_str)
+        assert (
+            result == expected
+        ), f"Failed on '{input_str}': expected {expected}, got {result}"
+
+    print("All tests passed!")
+
+
+def extract_updated_java_class(model_response):
+    """
+    Extracts the updated Java class code from the model's response.
+
+    Parameters:
+    - model_response (str): The JSON string response from the model.
+
+    Returns:
+    - str: The extracted Java class code, or an empty string if extraction fails.
+    """
+    try:
+        # Attempt to directly parse the JSON response
+        response_data = json.loads(model_response)
+        # Access the 'updated_java_class' directly from the parsed JSON
+        updated_java_class = response_data.get("updated_java_class", "")
+
+        # Ensure we're returning a string, even if the value was not found
+        return updated_java_class if isinstance(updated_java_class, str) else ""
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON from model response: {e}")
+        return ""
+
+
+if __name__ == "__main__":
+    test_extract_correctly_updated()
+
+    simulated_response = """```json
+    {"updated_java_class": "public class HelloWorld {\\\\n    public static void main(String[] args) {\\\\n        System.out.println(\\\\\\"Hello, World!\\\\\\");\\\\n    }\\\\n}"}
+    ```"""
+
+    expected_class = 'public class HelloWorld {\\n    public static void main(String[] args) {\\n        System.out.println("Hello, World!");\\n    }\\n}'
+
+    extracted_class = extract_updated_java_class(simulated_response)
+
+    assert (
+        extracted_class == expected_class
+    ), f"extract_updated_java_class failed: expected {expected_class}, got {extracted_class}"
+    print("extract_updated_java_class test passed!")
+
+
+openai_conversation_handler.py:
+import os
+import dotenv
+from openai import OpenAI
+
+from utils.print_utils.colored_print import print_blue, print_yellow
+
+
+class OpenAIConversationHandler:
+    def __init__(self, api_key, model="gpt-4o"):
+        self.client = OpenAI(api_key=api_key)
+        self.model = model
+
+    def ask_question(self, question):
+        """
+        Ask a question and get a response based on the current conversation history.
+
+        Parameters:
+        - question (str): The question or issue description.
+
+        Returns:
+        - response (str): The model's response.
+        """
+        # self.conversation_history.append({"role": "user", "content": question})
+
+        system_message = {
+            "role": "system",
+            "content": """
+                As an expert Java developer tasked with correcting SonarQube issues, your role is to analyze Java classes and apply necessary fixes directly. When responding, ensure you:
+
+                - Return the complete Java class code, including all imports and package declarations.
+                - Address the specified issue comprehensively, ensuring the fix maintains the class's functionality and adheres to Java best practices.
+                - Follow this JSON response format precisely to encapsulate the updated Java class code:
+                  ```json
+                  {
+                      "updated_java_class": "Complete Java class code here."
+                  }
+                  ```
+                It's crucial to include the entire corrected class code in your response, without indicating parts of the code as 'unchanged' or using placeholders. Aim for detailed, precise fixes that fully resolve the issue while keeping the class fully operational.
+                """,
+        }
+
+        print_yellow(40 * "=")
+        print(f"User question: {question}")
+        print_yellow(40 * "=")
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[system_message, {"role": "user", "content": question}],
+            temperature=0.5,
+            response_format={"type": "json_object"},
+        )
+
+        try:
+            # Extract the response and append it to the conversation history
+            model_response = response.choices[0].message.content
+            print(40 * "=")
+            print_blue(f"Model response: {model_response}")
+            print(40 * "=")
+
+            return model_response
+        except Exception as e:
+            print(f"Error processing the API response: {e}")
+            return None
+
+    def reset_conversation(self):
+        """
+        Resets the conversation history, starting fresh.
+        """
+        self.conversation_history = [self.conversation_history[0]]
+
+
+processed_issues_operations.py:
+import json
+import os
+
+def load_processed_issues(file_path):
+    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+        return {}
+    with open(file_path, 'r') as file:
+        return json.load(file)
+
+def save_processed_issue(file_path, issue_key, status):
+    processed_issues = load_processed_issues(file_path)
+    processed_issues[issue_key] = status
+    with open(file_path, 'w') as file:
+        json.dump(processed_issues, file, indent=4)
+
+
+docker_scan.py:
+import subprocess
+import os
+        
+def run_sonarqube_scan_docker(repo_path, sonarcloud_token, organization, project_key, working_directory="/tmp/sonar-scanner"):
+    try:
+        subprocess.run(
+            ["docker", "run", "--rm",
+             "-v", f"{os.path.abspath(repo_path)}:/usr/src",
+             "-v", f"{working_directory}:/usr/.scannerwork",
+             "sonarsource/sonar-scanner-cli",
+             "-Dsonar.projectKey=" + project_key,
+             "-Dsonar.organization=" + organization,
+             "-Dsonar.sources=.",
+             "-Dsonar.host.url=https://sonarcloud.io",
+             "-Dsonar.token=" + sonarcloud_token,
+             "-Dsonar.working.directory=/usr/.scannerwork"
+             ],
+            check=True, capture_output=True, text=True
+        )
+        print("SonarCloud scan completed successfully.")
+    except subprocess.CalledProcessError as e:
+        print("SonarCloud scan failed.")
+        print(e.stdout)
+        print(e.stderr)
+
+def create_sonar_project_file_if_not_exists(repo_path, repo_name):
+    SONAR_LOGIN_TOKEN = os.environ.get("SONAR_LOGIN_TOKEN")
+    
+    if os.path.isdir(repo_path):
+        sonar_file_path = os.path.join(repo_path, 'sonar-project.properties')
+        if not os.path.exists(sonar_file_path):
+            with open(sonar_file_path, 'w') as file:
+                file.write(f"sonar.projectKey={repo_name}\n")
+                file.write(f"sonar.projectName={repo_name}\n")
+                file.write("sonar.projectVersion=1.0\n")
+                file.write("sonar.sources=src/main/java\n")
+                file.write("sonar.java.binaries=target/classes\n")
+                file.write("sonar.exclusions=**/test/**\n")
+                file.write(f"sonar.token={SONAR_LOGIN_TOKEN}\n")
+                file.write("sonar.organization=dglalperen\n")
+            print(f"Created sonar-project.properties in {repo_path}")
+        else:
+            print(f"sonar-project.properties already exists in {repo_path}")
+    else:
+        print(f"The provided path does not exist or is not a directory: {repo_path}")
+        
+def test_create_sonar_project_file_if_not_exists():
+    repo_path = "../../../Repos/Rental-Car-Agency"
+    repo_name = "rental-car-agency"
+    create_sonar_project_file_if_not_exists(repo_path, repo_name)
+
+if __name__ == "__main__":
+    mac_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency"
+    windows_dir = "/Users/adagli/Desktop/Coding/Uni/Projekt-2/AutoDevAI/Repos/Rental-Car-Agency"
+    run_sonarqube_scan_docker(windows_dir)
+    #test_create_sonar_project_file_if_not_exists()
+
+sonar_backend_helper.py:
+import requests
+
+sonar_rules = [
+    "java:S2259",
+    "javabugs:S6466",
+    "java:S3655",
+    "java:S138",
+    "java:S1541",
+    "java:S1820",
+    "java:S1192",
+    "java:S1143",
+    "java:S2142",
+    "java:S1774",
+    "java:S2057",
+    "java:S106",
+    "java:S1068",
+    "java:S2390",
+    "java:S2095",
+    "java:S4925",
+    "java:S2699",
+    "java:S3776",
+    "java:S1448",
+    "java:S107",
+    "java:S3516",
+    "java:S3973",
+    "java:S2692",
+    "java:S2638",
+    "java:S2447",
+    "java:S131",
+    "java:S4970",
+    "java:S2252",
+]
+
+
+def get_projects(organization):
+    """
+    Get projects for a given organization.
+    """
+    response = requests.get(
+        f"http://localhost:3000/projects?organization={organization}"
+    )
+    if response.status_code == 200:
+        return response.json().get("components", [])
+    else:
+        return None
+
+
+def get_issues(project_key):
+    """
+    Get issues for a given project key.
+    """
+    response = requests.get(f"http://localhost:4000/issues?projects={project_key}")
+    if response.status_code == 200:
+        return response.json().get("issues", [])
+    else:
+        return None
+
+
+def filter_issues(issues):
+    """
+    Filter issues based on predefined sonar rules.
+    """
+    return [issue for issue in issues if issue.get("rule") in sonar_rules]
+
+
+def get_issues_by_complexity(issues, complexity="low"):
+    complexity_map = {
+        "low": ["java:S1192", "java:S106", "java:S2447", "java:S2259", "java:S3655"],
+        "high": ["java:S3776", "java:S1541", "java:S138"],
+    }
+    return [
+        issue for issue in issues if issue.get("rule") in complexity_map[complexity]
+    ]
+
+
+def get_filtered_issues(project_key, complexity="low"):
+    """
+    Get filtered issues for a given project key based on complexity.
+    """
+    issues = get_issues(project_key)
+    print(f"Total Issues for {project_key}: {len(issues)}")
+    for issue in issues:
+        print(issue)
+    if issues:
+        return get_issues_by_complexity(issues, complexity)
+    else:
+        print(f"No issues found for {project_key}.")
+        return []
+
+
+def get_issues_by_complexity(issues, complexity="low"):
+    complexity_map = {
+        "low": [
+            "java:S1192",
+            "java:S106",
+            "java:S2447",
+            "java:S2259",
+            "java:S3655",
+            "java:S1143",
+            "java:S2142",
+            "java:S1774",
+            "java:S2057",
+            "java:S2390",
+            "java:S2095",
+            "java:S4925",
+            "java:S2699",
+            "java:S3516",
+            "java:S3973",
+            "java:S2692",
+            "java:S2638",
+            "java:S131",
+            "javabugs:S6466",
+            "java:S1068",
+        ],
+        "high": [
+            "java:S3776",
+            "java:S1541",
+            "java:S138",
+            "java:S1820",
+            "java:S1448",
+            "java:S107",
+            "java:S4970",
+        ],
+    }
+    return [
+        issue for issue in issues if issue.get("rule") in complexity_map[complexity]
+    ]
+
+
+def main():
+    organization = "dglalperen"
+    project_key = "tasks-backend"
+    # https://github.com/dglalperen/api_backend.git
+    # https://github.com/dglalperen/server-backend.git
+    # https://github.com/dglalperen/webchat-backend.git
+    # https://github.com/dglalperen/quarkus-todo-app.git
+    # https://github.com/dglalperen/flutter_admin_backend.git
+    # https://github.com/dglalperen/simplQ-backend.git
+    # project_key = "dglalperen_Online-Banking-System"
+
+    issues = get_issues(project_key)
+    print(f"Total Issues for {project_key}: {len(issues)}")
+    if issues:
+        filtered_issues = filter_issues(issues)
+        print(f"Total Filtered Issues for {project_key}: {len(filtered_issues)}")
+        print(60 * "-")
+        print(f"Filtered Issues for {project_key}: {filtered_issues}")
+
+
+if __name__ == "__main__":
+    main()
+
+docker_maven_builder.py:
+import subprocess
+import re
+import os
+from pathlib import Path
+# mvn clean install -DskipTests
+
+# docker run --rm -v /Users/dglalperen/Desktop/Uni/Project-2/Repos/Rental-Car-Agency:/app maven-build-17 mvn clean install -DskipTests
+
+def check_and_build_custom_maven_image():
+    try:
+        subprocess.run(["docker", "image", "inspect", "maven-build-17"], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("Custom Maven image already exists.")
+    except subprocess.CalledProcessError:
+        try:
+            dockerfile_path = Path("../../Dockerfile.maven").as_posix()
+            subprocess.run(["docker", "build", "-t", "maven-build-17", "-f", dockerfile_path, "."], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("Custom Maven image built successfully.")
+        except subprocess.CalledProcessError as e:
+            print("Failed to build custom Maven image.")
+            return False
+    return True
+
+
+def run_maven_build_docker(project_path):
+    try:
+        subprocess.run(
+            ["docker", "run", "--rm", "-v", 
+             f"{project_path}:/app", "maven-build-17", 
+             "mvn", "-B", "clean", "install", "-DskipTests"],
+            stderr=subprocess.PIPE,  # Capture standard error
+            stdout=subprocess.DEVNULL,  # Suppress standard output
+            text=True  # Ensure output is in text format, not bytes
+        )
+        return True, None
+    except subprocess.CalledProcessError as e:
+        print("Build failed. Output:\n", e.stdout)
+        print("Build failed. Error Output:\n", e.stderr)
+        return False, e.stderr
+
+def extract_detailed_error_message(stderr):
+    # Pattern to identify the start of the actual error message
+    error_pattern = re.compile(r"\[ERROR\](.*?)\[INFO\]", re.DOTALL)
+
+    # Search for the pattern in stderr
+    match = error_pattern.search(stderr)
+    if match:
+        # Extracting only the error message part
+        error_message = match.group(1).strip()
+        # Removing additional [ERROR] tags from within the message
+        error_message_clean = re.sub(r"\[ERROR\]", "", error_message).strip()
+        return error_message_clean
+    else:
+        return "Detailed error message not found. Check the Maven build logs."
+
+
+def is_maven_project(path):
+    """ Check if a given path contains a Maven project (pom.xml file) """
+    return os.path.isfile(os.path.join(path, 'pom.xml'))
+
+def list_maven_projects(repos_dir):
+    """ List all Maven projects in the specified directory """
+    maven_projects = []
+    for repo_name in os.listdir(repos_dir):
+        repo_path = os.path.join(repos_dir, repo_name)
+        if os.path.isdir(repo_path) and is_maven_project(repo_path):
+            maven_projects.append(repo_path)
+    return maven_projects
+
+def main():
+    windows_dir="/Users/adagli/Desktop/Coding/Uni/Projekt-2/AutoDevAI/Repos"
+    mac_dir = "/Users/dglalperen/Desktop/Uni/Project-2/Repos"
+    maven_projects = list_maven_projects(windows_dir)
+
+    # Display Maven projects and let the user choose
+    print("Available Maven Projects:")
+    for idx, project in enumerate(maven_projects):
+        print(f"{idx}: {project}")
+
+    selected_index = int(input("Enter the number of the project to build: "))
+    if 0 <= selected_index < len(maven_projects):
+        selected_project = maven_projects[selected_index]
+        print(f"Building Maven project in {selected_project}...")
+        success, error_message = run_maven_build_docker(selected_project)
+        if success:
+            print(f"Build was successful for {selected_project}.")
+        else:
+            print(f"Build failed for {selected_project}. Error: {error_message}")
+    else:
+        print("Invalid selection.")
+
+if __name__ == "__main__":
+    if check_and_build_custom_maven_image():
+        main()
+    else:
+        print("Failed to build the custom Maven image. Exiting.")
+
+evaluate_prompt.py:
+def setup_evaluation_prompt(
+    original_code: str, updated_code: str, issue_description: str
+) -> str:
+    """
+    Constructs a prompt for evaluating the updated code and returns a string that can be used as an input for a model.
+
+    Parameters:
+    - original_code: The original Java code before the update.
+    - updated_code: The Java code after attempting to address the issue.
+    - issue_description: A description of the SonarQube issue addressed in the update.
+
+    Returns:
+    - A prompt string structured to guide the evaluation of the updated code.
+    """
+    prompt = f"""
+        Below are the original and updated versions of a Java class that was modified to address a specific SonarQube issue described below. Your task is to evaluate the updated class to determine if it correctly implements the necessary changes without introducing errors or omitting necessary parts of the original class.
+
+        **Issue Description:** {issue_description}
+
+        **Original Java Class:**
+        {original_code}
+
+        **Updated Java Class:**
+        {updated_code}
+
+        Evaluate the updated class to ensure:
+        1. The specific issue described above is addressed correctly.
+        2. All original functionality and structure are maintained unless directly related to the fix.
+        3. There are no new errors or issues introduced in the updated class.
+
+        Please return your evaluation in this JSON format:
+        ```json
+        {{
+            "correctly_updated_class": true/false  // Indicate 'true' if the updated class is correctly updated or 'false' otherwise.
+        }}
+        ```
+    """.strip()
+
+    return prompt
+
+
+if __name__ == "__main__":
+    # Example usage:
+    original_java_class = """
+    package com.pairlearning.expensetracker.resources;
+
+    import com.pairlearning.expensetracker.domain.Transaction;
+    import com.pairlearning.expensetracker.services.TransactionService;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+
+    import javax.servlet.http.HttpServletRequest;
+    import java.util.HashMap;
+    import java.util.List;
+    import java.util.Map;
+
+    @RestController
+    @RequestMapping("/api/categories/{categoryId}/transactions")
+    public class TransactionResource {
+
+        @Autowired
+        TransactionService transactionService;
+
+        @GetMapping("")
+        public ResponseEntity<List<Transaction>> getAllTransactions(HttpServletRequest request,
+                                                                    @PathVariable("categoryId") Integer categoryId) {
+            int userId = (Integer) request.getAttribute("userId");
+            List<Transaction> transactions = transactionService.fetchAllTransactions(userId, categoryId);
+            return new ResponseEntity<>(transactions, HttpStatus.OK);
+        }
+
+        @GetMapping("/{transactionId}")
+        public ResponseEntity<Transaction> getTransactionById(HttpServletRequest request,
+                                                            @PathVariable("categoryId") Integer categoryId,
+                                                            @PathVariable("transactionId") Integer transactionId) {
+            int userId = (Integer) request.getAttribute("userId");
+            Transaction transaction = transactionService.fetchTransactionById(userId, categoryId, transactionId);
+            return new ResponseEntity<>(transaction, HttpStatus.OK);
+        }
+
+        @PostMapping("")
+        public ResponseEntity<Transaction> addTransaction(HttpServletRequest request,
+                                                        @PathVariable("categoryId") Integer categoryId,
+                                                        @RequestBody Map<String, Object> transactionMap) {
+            int userId = (Integer) request.getAttribute("userId");
+            Double amount = Double.valueOf(transactionMap.get("amount").toString());
+            String note = (String) transactionMap.get("note");
+            Long transactionDate = (Long) transactionMap.get("transactionDate");
+            Transaction transaction = transactionService.addTransaction(userId, categoryId, amount, note, transactionDate);
+            return new ResponseEntity<>(transaction, HttpStatus.CREATED);
+        }
+
+        @PutMapping("/{transactionId}")
+        public ResponseEntity<Map<String, Boolean>> updateTransaction(HttpServletRequest request,
+                                                                    @PathVariable("categoryId") Integer categoryId,
+                                                                    @PathVariable("transactionId") Integer transactionId,
+                                                                    @RequestBody Transaction transaction) {
+            int userId = (Integer) request.getAttribute("userId");
+            transactionService.updateTransaction(userId, categoryId, transactionId, transaction);
+            Map<String, Boolean> map = new HashMap<>();
+            map.put("success", true);
+            return new ResponseEntity<>(map, HttpStatus.OK);
+        }
+
+        @DeleteMapping("/{transactionId}")
+        public ResponseEntity<Map<String, Boolean>> deleteTransaction(HttpServletRequest request,
+                                                                    @PathVariable("categoryId") Integer categoryId,
+                                                                    @PathVariable("transactionId") Integer transactionId) {
+            int userId = (Integer) request.getAttribute("userId");
+            transactionService.removeTransaction(userId, categoryId, transactionId);
+            Map<String, Boolean> map = new HashMap<>();
+            map.put("success", true);
+            return new ResponseEntity<>(map, HttpStatus.OK);
+        }
+    }
+    """
+    updated_java_class = """
+    package com.pairlearning.expensetracker.resources;\n\nimport com.pairlearning.expensetracker.domain.Transaction;\nimport com.pairlearning.expensetracker.services.TransactionService;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.http.ResponseEntity;\nimport org.springframework.web.bind.annotation.*;\n\nimport javax.servlet.http.HttpServletRequest;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\n\n@RestController\n@RequestMapping(\"/api/categories/{categoryId}/transactions\")\npublic class TransactionResource {\n\n    private static final String USER_ID = \"userId\"; // Added constant for \"userId\"\n\n    @Autowired\n    TransactionService transactionService;\n\n    @GetMapping(\"\")\n    public ResponseEntity<List<Transaction>> getAllTransactions(HttpServletRequest request,\n                                                                @PathVariable(\"categoryId\") Integer categoryId) {\n        int userId = (Integer) request.getAttribute(USER_ID); // Replaced \"userId\" with constant\n        List<Transaction> transactions = transactionService.fetchAllTransactions(userId, categoryId);\n        return new ResponseEntity<>(transactions, HttpStatus.OK);\n    }\n\n    @GetMapping(\"/{transactionId}\")\n    public ResponseEntity<Transaction> getTransactionById(HttpServletRequest request,\n                                                          @PathVariable(\"categoryId\") Integer categoryId,\n                                                          @PathVariable(\"transactionId\") Integer transactionId) {\n        int userId = (Integer) request.getAttribute(USER_ID); // Replaced \"userId\" with constant\n        Transaction transaction = transactionService.fetchTransactionById(userId, categoryId, transactionId);\n        return new ResponseEntity<>(transaction, HttpStatus.OK);\n    }\n\n    @PostMapping(\"\")\n    public ResponseEntity<Transaction> addTransaction(HttpServletRequest request,\n                                                      @PathVariable(\"categoryId\") Integer categoryId,\n                                                      @RequestBody Map<String, Object> transactionMap) {\n        int userId = (Integer) request.getAttribute(USER_ID); // Replaced \"userId\" with constant\n        Double amount = Double.valueOf(transactionMap.get(\"amount\").toString());\n        String note = (String) transactionMap.get(\"note\");\n        Long transactionDate = (Long) transactionMap.get(\"transactionDate\");\n        Transaction transaction = transactionService.addTransaction(userId, categoryId, amount, note, transactionDate);\n        return new ResponseEntity<>(transaction, HttpStatus.CREATED);\n    }\n}
+    """
+    task_description = (
+        "Define a constant instead of duplicating this literal 'userId' 5 times."
+    )
+
+    # Get the evaluation prompt.
+    evaluation_prompt = setup_evaluation_prompt(
+        original_java_class, updated_java_class, task_description
+    )
+    print(evaluation_prompt)
+
+prepare_prompt.py:
+import requests
+import re
+import os
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
+
+
+def print_yellow(text):
+    print("\x1b[33m{}\x1b[0m".format(text))
+
+
+def fetch_rule_details(rule_key):
+    try:
+        response = requests.get(f"http://localhost:3000/rules?key={rule_key}")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Failed to fetch rule details: {response.status_code}")
+    except Exception as e:
+        print(f"Error fetching rule details: {e}")
+    return None
+
+
+def get_file_content(component_key):
+    project_name, file_path = component_key.split(":", 1)
+
+    # Dynamically find the script's current directory
+    current_script_dir = os.path.dirname(os.path.realpath(__file__))
+
+    base_dir = os.path.abspath(
+        os.path.join(
+            current_script_dir, os.pardir, os.pardir, os.pardir, "Repos", project_name
+        )
+    )
+
+    full_path = os.path.join(base_dir, file_path)
+
+    try:
+        with open(full_path, "r") as file:
+            content = file.read()
+        return content
+    except FileNotFoundError:
+        return "File not found."
+    except Exception as e:
+        return str(e)
+
+
+def setup_format_instructions():
+    response_schemas = [
+        ResponseSchema(
+            name="updated_java_class",
+            description="The updated Java class code, encapsulated in a JSON object.",
+        )
+    ]
+
+    output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+
+    format_instructions = output_parser.get_format_instructions()
+
+    return format_instructions
+
+
+def extract_java_class_name(path):
+    """
+    Extracts the Java class name from a full path or partial path string.
+
+    Parameters:
+    - path (str): The full or partial path to the Java class file.
+
+    Returns:
+    - str: The extracted Java class name.
+    """
+    # Split the path by "/" to get segments, then take the last segment
+    last_segment = path.split("/")[-1]
+    # Remove the ".java" extension and return the class name
+    class_name = last_segment.replace(".java", "")
+    return class_name
+
+
+def setup_prompt(issue_key, issue, rule_details):
+    java_class_name = extract_java_class_name(issue["component"])
+    original_java_class = get_file_content(issue["component"])
+    issue_description = issue["message"]
+
+    prompt = f"""
+    Refactor the Java class {java_class_name} as it violates the SonarQube rule due to the issue: {issue_description}. 
+    Ensure your fix addresses the issue comprehensively and maintain all functionality.
+
+    Original Java Class:
+    {original_java_class}
+
+    Please correct the issue directly in the code provided below and return the complete Java class code in the following JSON format:
+    ```json
+    {{
+        "updated_java_class": "Complete updated Java class code here"
+    }}
+    ```
+
+    Your response must include the entire corrected Java class without placeholders indicating 'unchanged parts'. Make sure every part of the class is included, even those that don't need modification.
+    """
+    return prompt.strip()
+
+
+def extract_relevant_parts(md_description):
+    # Updated patterns for the start of sections
+    patterns = {
+        "why_issue": re.compile(r"<h2>Why is this an issue\?</h2>", re.IGNORECASE),
+        "exceptions": re.compile(r"<h3>Exceptions</h3>", re.IGNORECASE),
+        "how_to_fix_it": re.compile(r"<h2>How to fix it</h2>", re.IGNORECASE),
+        "code_examples": re.compile(r"<h3>Code examples</h3>", re.IGNORECASE),
+    }
+
+    # Initialize variables to hold extracted text
+    extracted_texts = {key: "" for key in patterns}
+
+    # Split the Markdown content into lines for processing
+    lines = md_description.split("\n")
+
+    # Variable to track the current section being extracted
+    current_section = None
+
+    # Iterate through each line in the Markdown description
+    for line in lines:
+        # Check if current line is the start of a new section
+        for section, pattern in patterns.items():
+            if pattern.match(line):
+                current_section = section
+                break
+
+        # Append the line to the appropriate section text if that section is being extracted
+        if current_section:
+            extracted_texts[current_section] += line + "\n"
+
+    # Removing HTML tags from each extracted section
+    for section in extracted_texts:
+        extracted_texts[section] = remove_html_tags(extracted_texts[section])
+
+    # Combine the extracted sections into a single string without HTML tags
+    extracted_text = "\n".join(extracted_texts.values())
+
+    return extracted_text
+
+
+def remove_html_tags(text):
+    """Remove html tags from a string"""
+    clean = re.compile("<.*?>")
+    return re.sub(clean, "", text)
+
+
+def test_get_file_content():
+    component_key = "expense-tracker-api:src/main/java/com/pairlearning/expensetracker/resources/CategoryResource.java"
+    file_content = get_file_content(component_key)
+    print(file_content)
+
+
+if __name__ == "__main__":
+    # Fetch rule details
+    rule_details = fetch_rule_details("java:S1192")
+
+    # Prepare the prompt using the 'prepare_prompt2' function
+    prompt = setup_prompt(
+        "java:S1192:src/main/java/com/rentalcar/agency/CarRentalAgency.java",
+        {
+            "key": "dglalperen_Rental-Car-Agency:src/main/java/com/rentalcar/agency/CarRentalAgency.java:java:S1192",
+            "rule": "java:S1192",
+            "severity": "MAJOR",
+            "component": "dglalperen_Rental-Car-Agency:src/main/java/com/rentalcar/agency/CarRentalAgency.java",
+            "line": 13,
+            "message": "String literals should not be duplicated",
+            "type": "CODE_SMELL",
+        },
+        rule_details,
+    )
+    # Print the prepared prompt
+    print(prompt)
+
+    # For testing purposes, you might want to simulate an AI response here
+    # Example AI response (modify as needed for your tests)
+    # simulated_ai_response = "format_code_as_json(java_code=\"public class HelloWorld {\\n    public static void main(String[] args) {\\n        System.out.println(\\\"Hello World!\\\");\\n    }\\n}\")"
+
+    # Handle the AI response
+    # formatted_output = handle_ai_response(simulated_ai_response)
+
+    # Print the formatted output to check if it is correct
+    # print(formatted_output)
+
+    # test_get_file_content()
+
+    # setup_format_instructions()
+
